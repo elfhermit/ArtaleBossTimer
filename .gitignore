@@ -1,0 +1,12 @@
+node_modules/
+.DS_Store
+.env
+*.log
+.vscode/
+dist/
+build/
+/.cache
+Thumbs.db
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
