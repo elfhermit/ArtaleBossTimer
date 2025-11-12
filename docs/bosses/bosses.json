@@ -1,0 +1,314 @@
+[
+  {
+    "id": "boss-1",
+    "name": "紅寶王",
+    "respawn": "23分~30分",
+    "minMinutes": 23,
+    "maxMinutes": 30,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-2",
+    "name": "冥界幽靈",
+    "respawn": "45分~1小時",
+    "minMinutes": 45,
+    "maxMinutes": 60,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-3",
+    "name": "巨居蟹",
+    "respawn": "45分~1小時",
+    "minMinutes": 45,
+    "maxMinutes": 60,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-4",
+    "name": "蘑菇王",
+    "respawn": "3小時30分~4小時",
+    "minMinutes": 210,
+    "maxMinutes": 240,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-5",
+    "name": "巴洛古",
+    "respawn": "6小時45分~9小時",
+    "minMinutes": 405,
+    "maxMinutes": 540,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-6",
+    "name": "樹妖王",
+    "respawn": "23分~30分",
+    "minMinutes": 23,
+    "maxMinutes": 30,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-7",
+    "name": "殭屍猴王",
+    "respawn": "38分~45分",
+    "minMinutes": 38,
+    "maxMinutes": 45,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-8",
+    "name": "沼澤巨鱷",
+    "respawn": "1小時30分~1小時45分",
+    "minMinutes": 90,
+    "maxMinutes": 105,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-9",
+    "name": "殭屍蘑菇王",
+    "respawn": "3小時15分~3小時45分",
+    "minMinutes": 195,
+    "maxMinutes": 225,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-10",
+    "name": "雪山魔女",
+    "respawn": "2小時38分~3小時",
+    "minMinutes": 158,
+    "maxMinutes": 180,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-11",
+    "name": "雪毛怪人",
+    "respawn": "45分~1小時8分",
+    "minMinutes": 45,
+    "maxMinutes": 68,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-12",
+    "name": "厄運死神",
+    "respawn": "45分~1小時45分",
+    "minMinutes": 45,
+    "maxMinutes": 105,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-13",
+    "name": "艾利傑",
+    "respawn": "1小時58分~2小時8分",
+    "minMinutes": 118,
+    "maxMinutes": 128,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-14",
+    "name": "咕咕鐘",
+    "respawn": "1小時8分~1小時30分",
+    "minMinutes": 68,
+    "maxMinutes": 90,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-15",
+    "name": "葛雷金剛",
+    "respawn": "4小時30分~5小時50分",
+    "minMinutes": 270,
+    "maxMinutes": 350,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-16",
+    "name": "書生幽靈",
+    "respawn": "2小時30分~5小時",
+    "minMinutes": 150,
+    "maxMinutes": 300,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-17",
+    "name": "九尾妖狐",
+    "respawn": "3小時30分~9小時30分",
+    "minMinutes": 210,
+    "maxMinutes": 570,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-18",
+    "name": "海怒斯(左)",
+    "respawn": "3小時~5小時",
+    "minMinutes": 180,
+    "maxMinutes": 300,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-19",
+    "name": "海怒斯(右)",
+    "respawn": "3小時~5小時",
+    "minMinutes": 180,
+    "maxMinutes": 300,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-20",
+    "name": "仙人長老",
+    "respawn": "1小時8分~1小時30分",
+    "minMinutes": 68,
+    "maxMinutes": 90,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-21",
+    "name": "自動警備系統",
+    "respawn": "2小時38分~2小時53分",
+    "minMinutes": 158,
+    "maxMinutes": 173,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-22",
+    "name": "奇美拉",
+    "respawn": "2小時~2小時15分",
+    "minMinutes": 120,
+    "maxMinutes": 135,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-23",
+    "name": "紅藍雙怪",
+    "respawn": "1小時53分~2小時15分",
+    "minMinutes": 113,
+    "maxMinutes": 135,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-24",
+    "name": "迪特和洛依",
+    "respawn": "2小時30分~2小時45分",
+    "minMinutes": 150,
+    "maxMinutes": 165,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-25",
+    "name": "仙人娃娃",
+    "respawn": "2小時38分~3小時",
+    "minMinutes": 158,
+    "maxMinutes": 180,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-26",
+    "name": "肯德熊",
+    "respawn": "1小時53分~2小時8分",
+    "minMinutes": 113,
+    "maxMinutes": 128,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-27",
+    "name": "巨大深山人蔘",
+    "respawn": "1小時~2小時15分",
+    "minMinutes": 60,
+    "maxMinutes": 135,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-28",
+    "name": "喵怪仙人",
+    "respawn": "2小時30分~2小時50分",
+    "minMinutes": 150,
+    "maxMinutes": 170,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-29",
+    "name": "多多",
+    "respawn": "45分~5小時15分",
+    "minMinutes": 45,
+    "maxMinutes": 315,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-30",
+    "name": "萊伊卡",
+    "respawn": "45分~5小時15分",
+    "minMinutes": 45,
+    "maxMinutes": 315,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-31",
+    "name": "利里諾斯",
+    "respawn": "45分~5小時15分",
+    "minMinutes": 45,
+    "maxMinutes": 315,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-32",
+    "name": "噴火龍",
+    "respawn": "20分~1小時",
+    "minMinutes": 20,
+    "maxMinutes": 60,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-33",
+    "name": "寒霜冰龍",
+    "respawn": "4小時~12小時",
+    "minMinutes": 240,
+    "maxMinutes": 720,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-34",
+    "name": "格瑞芬多",
+    "respawn": "20分~1小時",
+    "minMinutes": 20,
+    "maxMinutes": 60,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-35",
+    "name": "竹刀武士",
+    "respawn": "1小時53分~2小時8分",
+    "minMinutes": 113,
+    "maxMinutes": 128,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-36",
+    "name": "藍色蘑菇王",
+    "respawn": "16小時40分~31小時20分",
+    "minMinutes": 1000,
+    "maxMinutes": 1880,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-37",
+    "name": "蜈蚣大王",
+    "respawn": "45分~2小時15分",
+    "minMinutes": 45,
+    "maxMinutes": 135,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-38",
+    "name": "黑輪王",
+    "respawn": "13小時~17小時",
+    "minMinutes": 780,
+    "maxMinutes": 1020,
+    "image": "placeholder.svg"
+  },
+  {
+    "id": "boss-39",
+    "name": "瘋狂喵z客",
+    "respawn": "2小時~7小時",
+    "minMinutes": 120,
+    "maxMinutes": 420,
+    "image": "placeholder.svg"
+  }
+]

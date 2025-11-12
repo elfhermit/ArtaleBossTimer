@@ -10,8 +10,30 @@
 <body>
   <!-- Source snapshot of the app (archived in src/) -->
   <div class="container">
-    <h2>Source snapshot — archived files</h2>
-    <p>This folder contains the previous root files for reference and development.</p>
+    <h2>Boss 資料檢視（範例）</h2>
+    <p>載入自 <code>docs/bosses/bosses.json</code> — 此為示範頁面，圖片為佔位圖。</p>
+
+    <div class="row">
+      <div class="input-field col s12">
+        <input id="search" type="text" placeholder="搜尋 Boss 名稱或復活時間">
+        <label for="search">搜尋</label>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col s12 m6">
+        <div id="app">
+          <div id="boss-grid" class="boss-grid"></div>
+        </div>
+      </div>
+      <div class="col s12 m6">
+        <section class="card" style="padding:16px">
+          <h5>復活時間計算器</h5>
+          <div id="calculator"></div>
+          <div id="calc-result" style="margin-top:12px;color:#1f2937"></div>
+        </section>
+      </div>
+    </div>
   </div>
   <script src="app.js"></script>
 </body>
