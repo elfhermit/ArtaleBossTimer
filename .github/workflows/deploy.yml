@@ -1,17 +1,11 @@
-name: Docs check (no gh-pages publish)
+name: Disabled - Pages automation removed
 
 on:
-  push:
-    branches: [ main ]
+  workflow_dispatch: {}
 
 jobs:
-  docs-check:
+  noop:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Validate docs folder exists
-        run: |
-          if [ ! -d "./docs" ]; then echo "docs/ not found"; exit 1; fi
-          echo "docs/ exists. No publishing configured (Pages will use main/docs)."
+      - name: No-op (Pages automation removed)
+        run: echo "This workflow is intentionally disabled to avoid GitHub Pages automation."

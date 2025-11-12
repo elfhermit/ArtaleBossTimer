@@ -63,15 +63,62 @@ function populateBossSelect(){ BOSS_LIST.forEach(b => { const opt = document.cre
 function openForm(){ formSection.classList.remove('hidden'); formBoss.textContent = currentBoss; const now = new Date(); killTimeInput.value = now.toTimeString().split(' ')[0]; document.getElementById('editingId').value = ''; }
 function closeForm(){ formSection.classList.add('hidden'); killForm.reset(); }
 
-function renderRecords(){ const rows = getTodayRecordsForBoss(currentBoss); recordsTableBody.innerHTML = ''; rows.forEach(r => { const tr = document.createElement('tr'); const respawnText = computeRespawnForRecord(r); tr.innerHTML = `<td class="p-2 border">${formatTimeISOToLocalHHMMSS(r.timestamp)}</td>
-      <td class="p-2 border">${r.channel}</td>
-      <td class="p-2 border">${r.looted ? '是' : '否'}</td>
-      <td class="p-2 border">${r.note || ''}</td>
-      <td class="p-2 border">${respawnText}</td>
-      <td class="p-2 border">
-        <button data-id="${r.id}" class="editBtn bg-yellow-200 px-2 py-1 rounded mr-2">編輯</button>
-        <button data-id="${r.id}" class="deleteBtn bg-red-200 px-2 py-1 rounded">刪除</button>
-      </td>`; recordsTableBody.appendChild(tr); }); statsDiv.textContent = `共 ${rows.length} 筆紀錄`; }
+function renderRecords(){
+  const rows = getTodayRecordsForBoss(currentBoss);
+  recordsTableBody.innerHTML = '';
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    const respawnText = computeRespawnForRecord(r);
+
+    const tdTime = document.createElement('td');
+    tdTime.className = 'p-2 border';
+    tdTime.textContent = formatTimeISOToLocalHHMMSS(r.timestamp);
+    tr.appendChild(tdTime);
+
+    const tdChannel = document.createElement('td');
+    tdChannel.className = 'p-2 border';
+    tdChannel.textContent = String(r.channel);
+    tr.appendChild(tdChannel);
+
+    const tdLooted = document.createElement('td');
+    tdLooted.className = 'p-2 border';
+    tdLooted.textContent = r.looted ? '是' : '否';
+    tr.appendChild(tdLooted);
+
+    const tdNote = document.createElement('td');
+    tdNote.className = 'p-2 border';
+    tdNote.textContent = r.note || '';
+    tr.appendChild(tdNote);
+
+    const tdRespawn = document.createElement('td');
+    tdRespawn.className = 'p-2 border';
+    tdRespawn.textContent = respawnText;
+    tr.appendChild(tdRespawn);
+
+    const tdActions = document.createElement('td');
+    tdActions.className = 'p-2 border';
+
+  const editBtn = document.createElement('button');
+  editBtn.setAttribute('data-id', r.id);
+  editBtn.setAttribute('data-action', 'edit');
+  editBtn.className = 'editBtn bg-yellow-200 px-2 py-1 rounded mr-2';
+  editBtn.type = 'button';
+  editBtn.textContent = '編輯';
+  tdActions.appendChild(editBtn);
+
+  const deleteBtn = document.createElement('button');
+  deleteBtn.setAttribute('data-id', r.id);
+  deleteBtn.setAttribute('data-action', 'delete');
+  deleteBtn.className = 'deleteBtn bg-red-200 px-2 py-1 rounded';
+  deleteBtn.type = 'button';
+  deleteBtn.textContent = '刪除';
+  tdActions.appendChild(deleteBtn);
+
+    tr.appendChild(tdActions);
+    recordsTableBody.appendChild(tr);
+  });
+  statsDiv.textContent = `共 ${rows.length} 筆紀錄`;
+}
 
 bossSelect.addEventListener('change', e=>{ currentBoss = e.target.value; if(formBoss) formBoss.textContent = currentBoss; renderRecords(); try{ killTimeInput && killTimeInput.focus(); }catch(e){} });
 
@@ -79,7 +126,34 @@ cancelBtn.addEventListener('click', ()=>{ killForm.reset(); });
 
 killForm.addEventListener('submit', e =>{ e.preventDefault(); const ch = Number(channelInput.value); if(!Number.isInteger(ch) || ch < 1 || ch > 3000){ showToast('頻道必須為 1 到 3000 的整數', 'error'); return; } const looted = killForm.looted.value === 'true'; const note = noteInput.value.trim(); const timeStr = killTimeInput.value; const today = new Date(); const yyyy = today.getFullYear(); const mm = String(today.getMonth()+1).padStart(2,'0'); const dd = String(today.getDate()).padStart(2,'0'); const iso = `${yyyy}-${mm}-${dd}T${timeStr}`; const nowIso = new Date().toISOString(); const editingId = document.getElementById('editingId').value; if(editingId){ const ok = updateRecord(editingId, { bossId: currentBoss, timestamp: iso, channel: ch, looted, note }); if(!ok){ showToast('更新失敗，找不到該紀錄', 'error'); return; } closeForm(); renderRecords(); showToast('已更新紀錄', 'success'); }else{ const rec = { id: uid(), bossId: currentBoss, timestamp: iso, channel: ch, looted, note, createdAt: nowIso, updatedAt: nowIso, version: 'v1' }; addRecord(rec); closeForm(); renderRecords(); showToast('已新增紀錄', 'success'); } });
 
-recordsTableBody.addEventListener('click', e=>{ if(e.target.classList.contains('deleteBtn')){ const id = e.target.getAttribute('data-id'); showConfirm('確認刪除該筆紀錄？').then(ok => { if(ok) deleteRecordAndNotify(id); }); } if(e.target.classList.contains('editBtn')){ const id = e.target.getAttribute('data-id'); const found = findRecordKeyById(id); if(!found){ showToast('找不到該筆紀錄', 'error'); return; } const rec = found.record; document.getElementById('editingId').value = rec.id; formBoss.textContent = rec.bossId; bossSelect.value = rec.bossId; currentBoss = rec.bossId; const t = new Date(rec.timestamp); killTimeInput.value = t.toTimeString().split(' ')[0]; channelInput.value = rec.channel; noteInput.value = rec.note || ''; const lootedEl = Array.from(killForm.looted); lootedEl.forEach(r => { r.checked = (r.value === String(rec.looted)); }); openForm(); } });
+// Event delegation for edit/delete actions on the records table
+recordsTableBody.addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if(!btn || !recordsTableBody.contains(btn)) return;
+  const action = btn.getAttribute('data-action');
+  const id = btn.getAttribute('data-id');
+  if(action === 'delete'){
+    showConfirm('確認刪除該筆紀錄？').then(ok => { if(ok) deleteRecordAndNotify(id); });
+    return;
+  }
+  if(action === 'edit'){
+    const found = findRecordKeyById(id);
+    if(!found){ showToast('找不到該筆紀錄', 'error'); return; }
+    const rec = found.record;
+    document.getElementById('editingId').value = rec.id;
+    formBoss.textContent = rec.bossId;
+    bossSelect.value = rec.bossId;
+    currentBoss = rec.bossId;
+    const t = new Date(rec.timestamp);
+    killTimeInput.value = t.toTimeString().split(' ')[0];
+    channelInput.value = rec.channel;
+    noteInput.value = rec.note || '';
+    const lootedEl = Array.from(killForm.looted);
+    lootedEl.forEach(r => { r.checked = (r.value === String(rec.looted)); });
+    openForm();
+    return;
+  }
+});
 
 const originalDeleteRecord = deleteRecord;
 function deleteRecordAndNotify(id){ originalDeleteRecord(id); renderRecords(); showToast('已刪除紀錄', 'info'); }

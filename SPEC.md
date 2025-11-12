@@ -16,7 +16,6 @@
 
 - SHOULD
   - 篩選 / 搜尋（頻道、是否出貨、時間範圍）
-  - 匯入 / 匯出 JSON 的備份功能（暫不實作，先以同一瀏覽器操作為主）
   - 顯示當天每頻道的預估復活時間（表格或 tooltip）
 
 - MAY
@@ -45,7 +44,7 @@
 
 - key: `abt_records_v1`
 - value: { records: [ ... ], meta: { schemaVersion: "v1", lastPurgeAt: "..." } }
-- 3000 筆限制預設為「per-boss」：當某個 boss 的紀錄超過 3000 時自動刪除最舊紀錄。
+- 300 筆限制預設為「per-boss」：當某個 boss 的紀錄超過 300 時自動刪除最舊紀錄。
 - CRUD API（模組化）:
   - addRecord(record)
   - updateRecord(id, changes)
@@ -58,7 +57,7 @@
 
 - Boss: 必選
 - 擊殺時間: 預設為現在時間（可手動編輯），存成 ISO
-- 頻道: 必填，整數，1..3000
+- 頻道: 必填，整數，1..3000 (上限不固定，可調整，因為每天頻道上限不知)
 - 是否出貨: radio，必選
 - 備註: 選填，max 200 字
 
@@ -101,7 +100,7 @@ const bossRespawnRules = {
 
 ## 假設與風險
 
-- 假設：3000 筆為 per-boss 保留策略（如需改成 global，請回覆）
+- 假設：300 筆為 per-boss 保留策略（如需改成 global，請回覆）
 - 假設：資料存在於使用者本地瀏覽器（LocalStorage），不跨裝置
 - 風險：LocalStorage 容量限制與效能問題；建議提供匯出備份
 
