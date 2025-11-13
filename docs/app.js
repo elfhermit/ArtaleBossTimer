@@ -551,6 +551,10 @@ function calculateRespawnTimes(killISO, bossRule) {
 		const title = el('h5', {}, `紀錄 — ${bossTitle}`);
 		recordsRoot.appendChild(title);
 
+		// sorting state must be available before rendering sort status
+		window.__abt_records_sort = window.__abt_records_sort || { key: 'timestamp', dir: 'asc' };
+		const sortState = window.__abt_records_sort;
+
 		// show current sort status and reset control next to title
 		const keyLabelMap = { boss: '首領', timestamp: '時間', channel: '頻道', looted: '出貨', note: '備註', respawn: '預計復活' };
 		function renderSortStatus() {
@@ -573,7 +577,30 @@ function calculateRespawnTimes(killISO, bossRule) {
 			title.parentNode.insertBefore(span, title.nextSibling);
 		}
 		renderSortStatus();
-		recordsRoot.appendChild(title);
+
+		// add respawn status legend next to title
+		function renderRespawnLegend() {
+			const existing = document.getElementById('abt-respawn-legend');
+			if (existing) existing.remove();
+			const legend = el('div', {id: 'abt-respawn-legend', style: 'margin-left:24px;display:inline-flex;gap:16px;font-size:0.85rem;color:#666;align-items:center'});
+			// soon (orange)
+			const soonItem = el('span', {style: 'display:inline-flex;align-items:center;gap:6px'},
+				el('span', {style: 'display:inline-block;width:10px;height:10px;background:#ffb74d;border-radius:2px'}),
+				el('span', {}, '復活中')
+			);
+			// ready (green)
+			const readyItem = el('span', {style: 'display:inline-flex;align-items:center;gap:6px'},
+				el('span', {style: 'display:inline-block;width:10px;height:10px;background:#66bb6a;border-radius:2px'}),
+				el('span', {}, '已復活')
+			);
+			legend.appendChild(soonItem);
+			legend.appendChild(readyItem);
+			// insert after sort status
+			const sortStatus = document.getElementById('abt-sort-status');
+			if (sortStatus) sortStatus.parentNode.insertBefore(legend, sortStatus.nextSibling);
+			else title.parentNode.insertBefore(legend, title.nextSibling);
+		}
+		renderRespawnLegend();
 	// get all records for boss (or all if no bossId)
 	let rows = getRecords({ bossId });
 	// gather filters from UI (use typeof checks to avoid ReferenceError if helper not yet defined)
@@ -601,6 +628,48 @@ function calculateRespawnTimes(killISO, bossRule) {
 				return t >= start && t <= end;
 			});
 		}
+
+		// --- apply sorting based on global sortState (key, dir) ---
+		try {
+			const ss = window.__abt_records_sort || { key: 'timestamp', dir: 'asc' };
+			if (ss && ss.key) {
+				rows.sort((a, b) => {
+					const k = ss.key;
+					let va, vb;
+					switch (k) {
+						case 'timestamp':
+							va = new Date(a.timestamp).getTime(); vb = new Date(b.timestamp).getTime();
+							break;
+						case 'channel':
+							va = Number(a.channel) || 0; vb = Number(b.channel) || 0; break;
+						case 'looted':
+							va = a.looted ? 1 : 0; vb = b.looted ? 1 : 0; break;
+						case 'note':
+							va = (a.note || '').toLowerCase(); vb = (b.note || '').toLowerCase(); break;
+						case 'boss':
+							va = (BOSSES.find(x => x.id === a.bossId) || { name: '' }).name.toLowerCase();
+							vb = (BOSSES.find(x => x.id === b.bossId) || { name: '' }).name.toLowerCase();
+							break;
+						case 'respawn':
+							// compare earliest respawn timestamps (or 0 if not computable)
+							try { va = new Date(calculateRespawnTimes(a.timestamp, BOSSES.find(x=>x.id===a.bossId) || {}).times[0] || 0).getTime(); } catch(e){ va = 0; }
+							try { vb = new Date(calculateRespawnTimes(b.timestamp, BOSSES.find(x=>x.id===b.bossId) || {}).times[0] || 0).getTime(); } catch(e){ vb = 0; }
+							break;
+						default:
+							va = (a[k] || '').toString().toLowerCase(); vb = (b[k] || '').toString().toLowerCase();
+					}
+					// decide comparison
+					if (typeof va === 'string' && typeof vb === 'string') {
+						if (va < vb) return ss.dir === 'asc' ? -1 : 1;
+						if (va > vb) return ss.dir === 'asc' ? 1 : -1;
+						return 0;
+					}
+					// numeric fallback
+					const na = Number(va) || 0; const nb = Number(vb) || 0;
+					return ss.dir === 'asc' ? na - nb : nb - na;
+				});
+			}
+		} catch (e) { console.warn('排序失敗', e); }
 		if (!rows.length) { recordsRoot.appendChild(el('p', {}, '無紀錄')); return; }
 
 		// show active filters badges
@@ -617,8 +686,7 @@ function calculateRespawnTimes(killISO, bossRule) {
 			active.forEach(a => af.appendChild(el('span', {class: 'chip', style: 'margin-right:6px'}, a)));
 			recordsRoot.appendChild(af);
 		}
-			window.__abt_records_sort = window.__abt_records_sort || { key: 'timestamp', dir: 'asc' };
-		const sortState = window.__abt_records_sort;
+
 
 		// prepare table and headers (add Boss column when viewing all bosses)
 		const table = el('table', {class: 'striped'});
@@ -676,12 +744,39 @@ function calculateRespawnTimes(killISO, bossRule) {
 			// compute respawn using boss rule if available
 			const boss = BOSSES.find(b => b.id === r.bossId);
 			const resp = boss ? calculateRespawnTimes(r.timestamp, boss) : { humanReadable: '—' };
+			// format timestamp in 24-hour format
+			const ts = new Date(r.timestamp);
+			const tsDisplay = isNaN(ts) ? '—' : ts.toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+
+			// determine respawn status color class
+			let respClass = '';
+			try {
+				const now = Date.now();
+				if (resp && Array.isArray(resp.times) && resp.times.length) {
+					// interpret single time as instantaneous (min==max)
+					const t0 = resp.times[0] ? Date.parse(resp.times[0]) : NaN;
+					const t1 = resp.times[1] ? Date.parse(resp.times[1]) : t0;
+					if (!isNaN(t0) && !isNaN(t1)) {
+						if (now < t0) {
+							// not yet reached earliest respawn -> no special class
+							respClass = '';
+						} else if (now >= t0 && now <= t1) {
+							// now within respawn range -> orange (soon)
+							respClass = 'respawn-soon';
+						} else if (now > t1) {
+							// now after range -> green (available)
+							respClass = 'respawn-ready';
+						}
+					}
+				}
+			} catch (e) { /* ignore */ }
+
 			const tr = el('tr', {},
-				el('td', {}, new Date(r.timestamp).toLocaleString()),
+				el('td', {}, tsDisplay),
 				el('td', {}, String(r.channel)),
 				el('td', {}, r.looted ? '是' : '否'),
 				el('td', {}, r.note || ''),
-				el('td', {}, resp.humanReadable || '—'),
+				el('td', {class: respClass}, resp.humanReadable || '—'),
 				el('td', {},
 					el('button', {type: 'button', 'data-id': r.id, class: 'btn-small delete-btn'}, '刪除'),
 					el('button', {type: 'button', 'data-id': r.id, class: 'btn-small edit-btn', style: 'margin-left:6px'}, '編輯')

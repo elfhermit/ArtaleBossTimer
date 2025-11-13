@@ -39,3 +39,12 @@ table .btn-small { padding: 4px 6px; font-size: 0.75rem; }
 #abt-sort-status { display: inline-flex; align-items: center; gap:8px; }
 #abt-reset-sort { margin-left:6px; padding:4px 8px; font-size:0.8rem; border-radius:4px; cursor:pointer; }
 #abt-reset-sort:hover { background: rgba(0,0,0,0.04); }
+
+/* respawn status markers (modern-friendly colors) */
+.respawn-soon { background: #fff4e6; color: #663c00; }
+.respawn-ready { background: #e8f5e9; color: #1b5e20; }
+
+/* small colored square indicator before text */
+.respawn-soon::before, .respawn-ready::before { content: ''; display:inline-block; width:10px; height:10px; margin-right:8px; vertical-align:middle; border-radius:2px; }
+.respawn-soon::before { background: #ffb74d; }
+.respawn-ready::before { background: #66bb6a; }
