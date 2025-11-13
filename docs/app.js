@@ -434,7 +434,13 @@ function calculateRespawnTimes(killISO, bossRule) {
 
 	function renderRecords(bossId, date) {
 		recordsRoot.innerHTML = '';
-		const title = el('h5', {}, `紀錄 — ${bossId || '全部'}`);
+		// determine human-friendly boss name for title
+		let bossTitle = '全部';
+		if (bossId) {
+			const b = (typeof BOSSES !== 'undefined' && Array.isArray(BOSSES)) ? BOSSES.find(x => x.id === bossId) : null;
+			bossTitle = b ? b.name : bossId;
+		}
+		const title = el('h5', {}, `紀錄 — ${bossTitle}`);
 		recordsRoot.appendChild(title);
 	// get all records for boss (or all if no bossId)
 	let rows = getRecords({ bossId });
@@ -479,8 +485,49 @@ function calculateRespawnTimes(killISO, bossRule) {
 			active.forEach(a => af.appendChild(el('span', {class: 'chip', style: 'margin-right:6px'}, a)));
 			recordsRoot.appendChild(af);
 		}
+		// sorting state (persist per-window)
+		window.__abt_records_sort = window.__abt_records_sort || { key: 'timestamp', dir: 'desc' };
+		const sortState = window.__abt_records_sort;
+
+		// prepare table and headers (add Boss column when viewing all bosses)
 		const table = el('table', {class: 'striped'});
-		const thead = el('thead', {}, el('tr', {}, el('th', {}, 'Time'), el('th', {}, 'Channel'), el('th', {}, 'Looted'), el('th', {}, 'Note'), el('th', {}, '預計復活'), el('th', {}, 'Actions')));
+		const thead = el('thead');
+		const headerRow = el('tr');
+
+		// helper to build a sortable header cell (adds aria-sort and a small indicator)
+		function thSortable(label, key) {
+			const th = el('th', {}, label);
+			th.classList.add('sortable');
+			th.style.cursor = 'pointer';
+			// show arrow for current sort and set aria-sort
+			function renderIndicator() {
+				const isActive = sortState.key === key;
+				const arrow = isActive ? (sortState.dir === 'asc' ? ' ▲' : ' ▼') : '';
+				th.innerHTML = label + arrow;
+				if (isActive) th.setAttribute('aria-sort', sortState.dir === 'asc' ? 'ascending' : 'descending'); else th.removeAttribute('aria-sort');
+			}
+			renderIndicator();
+			th.addEventListener('click', () => {
+				if (sortState.key === key) sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+				else { sortState.key = key; sortState.dir = 'asc'; }
+				// persist to window and localStorage
+				window.__abt_records_sort = sortState;
+				try { localStorage.setItem('abt_records_sort', JSON.stringify(sortState)); } catch (e) {}
+				// re-render with new sort
+				renderRecords(bossId, date);
+			});
+			return th;
+		}
+
+		// if showing all bosses, include Boss column (中文化表頭)
+		if (!bossId) headerRow.appendChild(thSortable('首領', 'boss'));
+		headerRow.appendChild(thSortable('時間', 'timestamp'));
+		headerRow.appendChild(thSortable('頻道', 'channel'));
+		headerRow.appendChild(thSortable('出貨', 'looted'));
+		headerRow.appendChild(thSortable('備註', 'note'));
+		headerRow.appendChild(thSortable('預計復活', 'respawn'));
+		headerRow.appendChild(el('th', {}, '操作'));
+		thead.appendChild(headerRow);
 		table.appendChild(thead);
 		const tbody = el('tbody');
 		rows.forEach(r => {
