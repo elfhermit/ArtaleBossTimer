@@ -196,8 +196,11 @@ function calculateRespawnTimes(killISO, bossRule) {
 					return;
 				}
 				list.forEach(b => {
-					const item = el('div', {class: 'compact-boss-item', style: 'padding:6px;border-bottom:1px solid #eee;cursor:pointer'}, `${b.name} ${b.minMinutes!=null ? '('+b.minMinutes+'~'+b.maxMinutes+'分)':''}`);
+					const item = el('div', {'class': 'compact-boss-item', 'data-boss-id': b.id, style: 'padding:6px;border-bottom:1px solid #eee;cursor:pointer'}, `${b.name} ${b.minMinutes!=null ? '('+b.minMinutes+'~'+b.maxMinutes+'分)':''}`);
 					item.addEventListener('click', () => {
+						// highlight selection in compact list
+						compact.querySelectorAll('.compact-boss-item').forEach(it => it.classList.remove('active'));
+						item.classList.add('active');
 						const sel = document.getElementById('boss-dropdown');
 						if (sel) sel.value = b.id;
 						prefillCalculator(b);
@@ -219,6 +222,30 @@ function calculateRespawnTimes(killISO, bossRule) {
 		// also set record form boss select if present
 		const rf = document.getElementById('record-boss');
 		if (rf) rf.value = boss.id;
+
+		// remember last selected boss
+		try { localStorage.setItem('abt_lastBoss', boss.id); } catch (e) {}
+
+		// update a visible preview near the record form so user clearly sees the selected boss
+		try {
+			const root = document.getElementById('record-form-root');
+			if (root) {
+				let prev = document.getElementById('selected-boss-preview');
+				const text = `${boss.name}${boss.minMinutes != null ? `（${boss.minMinutes}~${boss.maxMinutes}分）` : ''}`;
+				if (!prev) {
+					prev = document.createElement('div');
+					prev.id = 'selected-boss-preview';
+					prev.style.margin = '6px 0 12px 0';
+					prev.style.padding = '6px 10px';
+					prev.style.background = '#fafafa';
+					prev.style.border = '1px solid #eee';
+					prev.style.borderRadius = '6px';
+					prev.style.color = '#333';
+					root.insertBefore(prev, root.firstChild);
+				}
+				prev.innerText = `已選： ${text}`;
+			}
+		} catch (e) { /* ignore */ }
 	}
 
 	function buildCalculatorAndRecordUI(bosses) {
@@ -650,6 +677,14 @@ function calculateRespawnTimes(killISO, bossRule) {
 			BOSSES = bosses;
 			renderBosses(bosses);
 			buildCalculatorAndRecordUI(bosses);
+			// if there was a previously selected boss, call prefill to show preview and highlight
+			try {
+				const last = localStorage.getItem('abt_lastBoss');
+				if (last) {
+					const b = BOSSES.find(x => x.id === last);
+					if (b) prefillCalculator(b);
+				}
+			} catch (e) {}
 				// build filters UI now that DOM exists
 				if (window.__abt_buildFiltersUI) window.__abt_buildFiltersUI(bosses);
 			// search filters the dropdown and compact list
