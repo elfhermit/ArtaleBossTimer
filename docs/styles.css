@@ -14,6 +14,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto
 /* selected boss preview */
 #selected-boss-preview { font-weight: 600; color: #222; }
 
+/* hidden select used for 'change' UX */
+.abt-hidden-select { display: none !important; }
+
+.preview-warning { background: #fff3e0 !important; }
+
 /* sortable header styles */
 .sortable { position: relative; user-select: none; }
 .sortable:hover { background: rgba(0,0,0,0.02); }

@@ -115,6 +115,19 @@ function calculateRespawnTimes(killISO, bossRule) {
 		const recordsRoot = document.getElementById('records-root');
 		let BOSSES = [];
 
+		// ensure an aria-live region exists for screen-reader announcements
+		try {
+			if (!document.getElementById('abt-aria-live')) {
+				const al = document.createElement('div');
+				al.id = 'abt-aria-live';
+				al.setAttribute('aria-live', 'polite');
+				al.setAttribute('aria-atomic', 'true');
+				al.style.position = 'absolute';
+				al.style.left = '-9999px';
+				document.body.appendChild(al);
+			}
+		} catch (e) {}
+
 		// load saved sort state from localStorage if present (key: abt_records_sort)
 		try {
 			const raw = localStorage.getItem('abt_records_sort');
@@ -196,14 +209,24 @@ function calculateRespawnTimes(killISO, bossRule) {
 					return;
 				}
 				list.forEach(b => {
-					const item = el('div', {'class': 'compact-boss-item', 'data-boss-id': b.id, style: 'padding:6px;border-bottom:1px solid #eee;cursor:pointer'}, `${b.name} ${b.minMinutes!=null ? '('+b.minMinutes+'~'+b.maxMinutes+'分)':''}`);
+					// use a button for better semantics and keyboard support
+					const item = el('button', {type: 'button', 'class': 'compact-boss-item list-item', 'data-boss-id': b.id, 'aria-pressed': 'false', style: 'padding:6px;border-bottom:1px solid #eee;cursor:pointer;width:100%;text-align:left;'}, `${b.name} ${b.minMinutes!=null ? '('+b.minMinutes+'~'+b.maxMinutes+'分)':''}`);
 					item.addEventListener('click', () => {
-						// highlight selection in compact list
-						compact.querySelectorAll('.compact-boss-item').forEach(it => it.classList.remove('active'));
+						// remove active state from others
+						compact.querySelectorAll('.compact-boss-item').forEach(it => {
+							it.classList.remove('active');
+							it.removeAttribute('aria-current');
+							it.setAttribute('aria-pressed', 'false');
+						});
+						// mark this one active
 						item.classList.add('active');
+						item.setAttribute('aria-current', 'true');
+						item.setAttribute('aria-pressed', 'true');
 						const sel = document.getElementById('boss-dropdown');
 						if (sel) sel.value = b.id;
 						prefillCalculator(b);
+						// announce to screen readers
+						try { document.getElementById('abt-aria-live').textContent = `已選 ${b.name}`; } catch (e) {}
 					});
 					compact.appendChild(item);
 				});
@@ -241,9 +264,54 @@ function calculateRespawnTimes(killISO, bossRule) {
 					prev.style.border = '1px solid #eee';
 					prev.style.borderRadius = '6px';
 					prev.style.color = '#333';
+					// add container for name + countdown + change button
+					prev.innerHTML = '<span id="selected-boss-name"></span> <span id="selected-boss-countdown" style="margin-left:8px;color:#666"></span>';
+					const changeBtn = document.createElement('button');
+					changeBtn.id = 'abt-change-boss';
+					changeBtn.type = 'button';
+					changeBtn.className = 'btn-small grey';
+					changeBtn.style.marginLeft = '12px';
+					changeBtn.textContent = '更改';
+					changeBtn.addEventListener('click', () => {
+						// toggle visibility of the record-boss select
+						const sel = document.getElementById('record-boss');
+						if (!sel) return;
+						if (sel.classList.contains('abt-hidden-select')) {
+							sel.classList.remove('abt-hidden-select');
+							sel.focus();
+						} else {
+							sel.classList.add('abt-hidden-select');
+						}
+					});
+					prev.appendChild(changeBtn);
 					root.insertBefore(prev, root.firstChild);
 				}
-				prev.innerText = `已選： ${text}`;
+				// set name
+				document.getElementById('selected-boss-name').textContent = `已選： ${text}`;
+
+				// countdown to earliest respawn from now (use minMinutes if provided)
+				try { window.__abt_preview_timer && clearInterval(window.__abt_preview_timer); } catch (e) {}
+				const cdEl = document.getElementById('selected-boss-countdown');
+				if (boss.minMinutes != null) {
+					const next = new Date(Date.now() + boss.minMinutes * 60000);
+					function updateCountdown() {
+						const diff = next.getTime() - Date.now();
+						if (diff <= 0) {
+							cdEl.textContent = '（已達最早復活時間）';
+							document.getElementById('selected-boss-preview').style.background = '#fff3e0';
+							return;
+						}
+						const mins = Math.floor(diff / 60000);
+						const secs = Math.floor((diff % 60000) / 1000);
+						cdEl.textContent = `距離最早復活：${mins}分${secs}秒`;
+						// warning if within 10 minutes
+						if (diff <= 10 * 60000) document.getElementById('selected-boss-preview').style.background = '#fff3e0'; else document.getElementById('selected-boss-preview').style.background = '#fafafa';
+					}
+					updateCountdown();
+					window.__abt_preview_timer = setInterval(updateCountdown, 1000);
+				} else {
+					cdEl.textContent = '';
+				}
 			}
 		} catch (e) { /* ignore */ }
 	}
@@ -338,7 +406,11 @@ function calculateRespawnTimes(killISO, bossRule) {
 		const lastBoss = localStorage.getItem('abt_lastBoss');
 		const recordBossSel = document.getElementById('record-boss');
 		if (lastBoss && recordBossSel) {
-			try { recordBossSel.value = lastBoss; } catch (e) { /* ignore */ }
+			try { 
+				recordBossSel.value = lastBoss; 
+				// hide select by default and leave visible preview
+				recordBossSel.classList.add('abt-hidden-select');
+			} catch (e) { /* ignore */ }
 		}
 
 		// record add / edit handling
