@@ -495,69 +495,35 @@ function calculateRespawnTimes(killISO, bossRule) {
 		// remember last selected boss
 		try { localStorage.setItem('abt_lastBoss', boss.id); } catch (e) {}
 
-		// update a visible preview near the record form so user clearly sees the selected boss
+		// update visible preview inside the record card
 		try {
-			const root = document.getElementById('record-form-root');
-			if (root) {
-				let prev = document.getElementById('selected-boss-preview');
-				const text = `${boss.name}${boss.minMinutes != null ? `（${boss.minMinutes}~${boss.maxMinutes}分）` : ''}`;
-				if (!prev) {
-					prev = document.createElement('div');
-					prev.id = 'selected-boss-preview';
-					prev.style.margin = '6px 0 12px 0';
-					prev.style.padding = '6px 10px';
-					prev.style.background = '#fafafa';
-					prev.style.border = '1px solid #eee';
-					prev.style.borderRadius = '6px';
-					prev.style.color = '#333';
-					// add container for name + countdown + change button
-					prev.innerHTML = '<span id="selected-boss-name"></span> <span id="selected-boss-countdown" style="margin-left:8px;color:#666"></span>';
-					const changeBtn = document.createElement('button');
-					changeBtn.id = 'abt-change-boss';
-					changeBtn.type = 'button';
-					changeBtn.className = 'btn-small grey';
-					changeBtn.style.marginLeft = '12px';
-					changeBtn.textContent = '更改';
-					changeBtn.addEventListener('click', () => {
-						// toggle visibility of the record-boss select
-						const sel = document.getElementById('record-boss');
-						if (!sel) return;
-						if (sel.classList.contains('abt-hidden-select')) {
-							sel.classList.remove('abt-hidden-select');
-							sel.focus();
-						} else {
-							sel.classList.add('abt-hidden-select');
-						}
-					});
-					prev.appendChild(changeBtn);
-					root.insertBefore(prev, root.firstChild);
-				}
-				// set name
-				document.getElementById('selected-boss-name').textContent = `已選： ${text}`;
-
-				// countdown to earliest respawn from now (use minMinutes if provided)
-				try { window.__abt_preview_timer && clearInterval(window.__abt_preview_timer); } catch (e) {}
-				const cdEl = document.getElementById('selected-boss-countdown');
-				if (boss.minMinutes != null) {
-					const next = new Date(Date.now() + boss.minMinutes * 60000);
-					function updateCountdown() {
-						const diff = next.getTime() - Date.now();
-						if (diff <= 0) {
-							cdEl.textContent = '（已達最早復活時間）';
-							document.getElementById('selected-boss-preview').style.background = '#fff3e0';
-							return;
-						}
-						const mins = Math.floor(diff / 60000);
-						const secs = Math.floor((diff % 60000) / 1000);
-						cdEl.textContent = `距離最早復活：${mins}分${secs}秒`;
-						// warning if within 10 minutes
-						if (diff <= 10 * 60000) document.getElementById('selected-boss-preview').style.background = '#fff3e0'; else document.getElementById('selected-boss-preview').style.background = '#fafafa';
+			const text = `${boss.name}${boss.minMinutes != null ? `（${boss.minMinutes}~${boss.maxMinutes}分）` : ''}`;
+			const nameEl = document.getElementById('selected-boss-name');
+			if (nameEl) nameEl.textContent = `已選： ${text}`;
+			// countdown to earliest respawn from now (use minMinutes if provided)
+			try { window.__abt_preview_timer && clearInterval(window.__abt_preview_timer); } catch (e) {}
+			const cdEl = document.getElementById('selected-boss-countdown');
+			if (boss.minMinutes != null && cdEl) {
+				const next = new Date(Date.now() + boss.minMinutes * 60000);
+				function updateCountdown() {
+					const diff = next.getTime() - Date.now();
+					if (diff <= 0) {
+						cdEl.textContent = '（已達最早復活時間）';
+						const prevEl = document.getElementById('selected-boss-preview'); if (prevEl) prevEl.style.background = '#fff3e0';
+						return;
 					}
-					updateCountdown();
-					window.__abt_preview_timer = setInterval(updateCountdown, 1000);
-				} else {
-					cdEl.textContent = '';
+					const mins = Math.floor(diff / 60000);
+					const secs = Math.floor((diff % 60000) / 1000);
+					cdEl.textContent = `距離最早復活：${mins}分${secs}秒`;
+					// warning if within 10 minutes
+					const prevEl = document.getElementById('selected-boss-preview'); if (prevEl) {
+						if (diff <= 10 * 60000) prevEl.style.background = '#fff3e0'; else prevEl.style.background = '#fafafa';
+					}
 				}
+				updateCountdown();
+				window.__abt_preview_timer = setInterval(updateCountdown, 1000);
+			} else {
+				if (cdEl) cdEl.textContent = '';
 			}
 		} catch (e) { /* ignore */ }
 	}
@@ -601,7 +567,13 @@ function calculateRespawnTimes(killISO, bossRule) {
 		// --- record form ---
 		recordFormRoot.innerHTML = '';
 		const rf = el('div', {class: 'card', style: 'padding:12px'},
-			el('h5', {}, '新增擊殺紀錄'),
+			el('h5', {}, '📝 紀錄擊殺'),
+			// selected boss preview placeholder (will be populated by prefillCalculator)
+			el('div', {id: 'selected-boss-preview', style: 'margin:6px 0 12px 0;padding:6px 10px;background:#fafafa;border:1px solid #eee;border-radius:6px;color:#333'},
+				el('span', {id: 'selected-boss-name'}, ''),
+				el('span', {id: 'selected-boss-countdown', style: 'margin-left:8px;color:#666'}, ''),
+				el('button', {id: 'abt-change-boss', type: 'button', class: 'btn-small grey', style: 'margin-left:12px'}, '更改')
+			),
 			el('label', {}, 'Boss：'), el('select', {id: 'record-boss'}, bosses.map(b => el('option', {value: b.id}, b.name))), el('br'),
 			/* 擊殺時間由系統自動生成 (使用新增時刻) */
 			el('p', {id: 'record-time-display', style: 'color:#666;margin:8px 0 0 0;font-size:0.95rem'}, `擊殺時間：${new Date().toLocaleString()}`),
@@ -631,35 +603,76 @@ function calculateRespawnTimes(killISO, bossRule) {
 		rf.appendChild(el('br'));
 		rf.appendChild(el('button', {id: 'record-add', type: 'button', class: 'btn teal'}, '新增紀錄'));
 		rf.appendChild(el('button', {id: 'record-cancel', type: 'button', class: 'btn grey', style: 'margin-left:8px;display:none'}, '取消編輯'));
-		recordFormRoot.appendChild(rf);
-
-		// channel grid (1..20 quick buttons)
-		const channelGrid = el('div', {style: 'margin-top:8px;display:flex;flex-wrap:wrap;gap:6px'},
-			...Array.from({length:20}, (_,i) => el('button', {type:'button', class:'btn-small', 'data-channel': String(i+1)}, String(i+1)))
+		// channel stepper (mixed input) + quick-channels
+		const stepper = el('div', {class: 'channel-control-group', style: 'margin-top:8px'},
+			el('label', {class: 'input-label'}, '頻道'),
+			el('div', {class: 'stepper-wrapper', style: 'display:flex;align-items:center;background:#f5f5f5;border-radius:8px;overflow:hidden;border:1px solid #e6e6e6'},
+				el('button', {type:'button', id: 'channel-dec', class: 'step-btn', style: 'background:#eee;border:none;width:44px;height:40px'}, '❮'),
+				// reuse existing record-channel input for persistence
+				el('input', {id: 'record-channel', type: 'number', min: 1, max: 3000, step: 1, value: 1, class: 'channel-input', style: 'flex:1;background:transparent;border:none;text-align:center;font-size:18px;padding:10px 0;outline:none'}),
+				el('button', {type:'button', id: 'channel-inc', class: 'step-btn', style: 'background:#eee;border:none;width:44px;height:40px'}, '❯')
+			),
+			el('div', {id: 'quick-channels', class: 'quick-channels', style: 'margin-top:8px;display:flex;gap:8px;flex-wrap:wrap'} )
 		);
-		recordFormRoot.appendChild(channelGrid);
+		rf.appendChild(stepper);
 
-		// +/-1 minute controls
-		const timeAdjust = el('div', {style: 'margin-top:8px;display:flex;gap:8px;align-items:center'},
+		// time adjust row: [-1]  時間顯示  [+1]
+		const timeAdjust = el('div', {id: 'time-adjust-row', style: 'margin-top:8px;display:flex;gap:8px;align-items:center;justify-content:flex-start'},
 			el('button', {type: 'button', id: 'minus-1', class: 'btn-small'}, '−1 分'),
+			el('p', {id: 'record-time-display-inline', style: 'color:#666;margin:0;font-size:0.95rem;padding:0 6px'}, `擊殺時間：${new Date().toLocaleString()}`),
 			el('button', {type: 'button', id: 'plus-1', class: 'btn-small'}, '+1 分')
 		);
-		recordFormRoot.appendChild(timeAdjust);
+		rf.appendChild(timeAdjust);
+		recordFormRoot.appendChild(rf);
 
-		// wire channel grid clicks (make them behave like choice chips)
+		// wire '更改' 按鈕 to toggle visibility of boss select
 		try {
-			channelGrid.querySelectorAll('button[data-channel]').forEach(btn => btn.addEventListener('click', (ev) => {
-				const ch = ev.currentTarget.getAttribute('data-channel');
-				try {
-					// remove active from siblings
-					channelGrid.querySelectorAll('button[data-channel]').forEach(b => b.classList.remove('active'));
-					// mark this one active
-					ev.currentTarget.classList.add('active');
-					document.getElementById('record-channel').value = ch;
-					document.getElementById('record-channel').focus();
-				} catch (e) {}
-			}));
-		} catch (e) { /* ignore if channelGrid not present */ }
+			const changeBtn = document.getElementById('abt-change-boss');
+			if (changeBtn) changeBtn.addEventListener('click', () => {
+				const sel = document.getElementById('record-boss');
+				if (!sel) return;
+				if (sel.classList.contains('abt-hidden-select')) {
+					sel.classList.remove('abt-hidden-select');
+					sel.focus();
+				} else {
+					sel.classList.add('abt-hidden-select');
+				}
+			});
+		} catch (e) {}
+
+		// wire stepper controls and quick-channels
+		try {
+			function clampChannel(v){ return Math.max(1, Math.min(3000, Number(v)||1)); }
+			const incBtn = document.getElementById('channel-inc');
+			const decBtn = document.getElementById('channel-dec');
+			const chInput = document.getElementById('record-channel');
+			const quickRoot = document.getElementById('quick-channels');
+			if (incBtn && chInput) incBtn.addEventListener('click', ()=>{ chInput.value = clampChannel(Number(chInput.value) + 1); chInput.focus(); renderQuickChannels(); });
+			if (decBtn && chInput) decBtn.addEventListener('click', ()=>{ chInput.value = clampChannel(Number(chInput.value) - 1); chInput.focus(); renderQuickChannels(); });
+			if (chInput) {
+				chInput.addEventListener('input', (ev)=>{ ev.target.value = clampChannel(ev.target.value); });
+				chInput.addEventListener('change', ()=> renderQuickChannels());
+			}
+
+			// recent channels persisted in localStorage key 'abt_recent_channels' as JSON array
+			function getRecentChannels(){ try { return JSON.parse(localStorage.getItem('abt_recent_channels')||'[]'); } catch(e){ return []; } }
+			function saveRecentChannels(arr){ try { localStorage.setItem('abt_recent_channels', JSON.stringify(arr)); } catch(e){} }
+			function addRecentChannel(n){ try { const arr = getRecentChannels().filter(x=>x!==n); arr.unshift(n); if (arr.length>8) arr.length = 8; saveRecentChannels(arr); } catch(e){} }
+
+			function renderQuickChannels(){
+				if (!quickRoot) return;
+				quickRoot.innerHTML = '';
+				const arr = getRecentChannels();
+				if (!arr.length) return;
+				arr.forEach(ch => {
+					const chip = el('button', {type:'button', class:'quick-chip btn-small grey', 'data-channel': String(ch)}, String(ch));
+					chip.addEventListener('click', ()=>{ const input = document.getElementById('record-channel'); if (input) { input.value = clampChannel(ch); input.focus(); } });
+					quickRoot.appendChild(chip);
+				});
+			}
+			// initial render
+			renderQuickChannels();
+		} catch (e) { /* ignore */ }
 
 		// time adjust handlers: modify hidden ISO and display
 		function ensureTimestampOverrideExists() {
@@ -673,26 +686,33 @@ function calculateRespawnTimes(killISO, bossRule) {
 			return isoEl;
 		}
 		try {
-			document.getElementById('minus-1').addEventListener('click', () => {
+			// helper to adjust kill time by minutes
+			function adjustKillTime(deltaMinutes) {
 				try {
 					const isoEl = ensureTimestampOverrideExists();
 					if (!isoEl) return;
 					const dt = new Date(isoEl.value);
-					dt.setMinutes(dt.getMinutes() - 1);
+					dt.setMinutes(dt.getMinutes() + deltaMinutes);
 					isoEl.value = dt.toISOString();
+					// update both display DOM nodes
 					const disp = document.getElementById('record-time-display'); if (disp) disp.innerText = `擊殺時間：${dt.toLocaleString()}`;
-				} catch (e) {}
-			});
-			document.getElementById('plus-1').addEventListener('click', () => {
-				try {
-					const isoEl = ensureTimestampOverrideExists();
-					if (!isoEl) return;
-					const dt = new Date(isoEl.value);
-					dt.setMinutes(dt.getMinutes() + 1);
-					isoEl.value = dt.toISOString();
-					const disp = document.getElementById('record-time-display'); if (disp) disp.innerText = `擊殺時間：${dt.toLocaleString()}`;
-				} catch (e) {}
-			});
+					const dispInline = document.getElementById('record-time-display-inline'); if (dispInline) dispInline.innerText = `擊殺時間：${dt.toLocaleString()}`;
+				} catch (e) { /* ignore */ }
+			}
+
+			document.getElementById('minus-1').addEventListener('click', () => adjustKillTime(-1));
+			document.getElementById('plus-1').addEventListener('click', () => adjustKillTime(1));
+
+			// keyboard shortcuts: when user focuses inside record form, ArrowUp = +1, ArrowDown = -1
+			try {
+				const formRoot = document.getElementById('record-form-root');
+				if (formRoot) {
+					formRoot.addEventListener('keydown', (ev) => {
+						if (ev.key === 'ArrowUp') { ev.preventDefault(); adjustKillTime(1); }
+						if (ev.key === 'ArrowDown') { ev.preventDefault(); adjustKillTime(-1); }
+					});
+				}
+			} catch(e) {}
 		} catch (e) { /* ignore if controls missing */ }
 
 		// build filters UI placeholder (will be filled by buildFiltersUI)
@@ -779,6 +799,21 @@ function calculateRespawnTimes(killISO, bossRule) {
 					document.getElementById('record-channel').value = '';
 					// remember last boss
 					try { localStorage.setItem('abt_lastBoss', bossId); } catch (e) {}
+					// add to recent channels list (persist up to 8)
+					try {
+						const rcKey = 'abt_recent_channels';
+						const cur = JSON.parse(localStorage.getItem(rcKey) || '[]');
+						const chStr = String(chNum);
+						const filtered = cur.filter(x => x !== chStr);
+						filtered.unshift(chStr);
+						if (filtered.length > 8) filtered.length = 8;
+						localStorage.setItem(rcKey, JSON.stringify(filtered));
+						// re-render quick channels if present
+						try { const quickRoot = document.getElementById('quick-channels'); if (quickRoot && typeof quickRoot.innerHTML !== 'undefined') {
+							// rebuild via existing render handler by triggering change event
+							const evt = new Event('change'); document.getElementById('record-channel').dispatchEvent(evt);
+						} } catch(e) {}
+					} catch(e) {}
 					showToast('新增完成', { classes: 'green darken-1' });
 					// focus channel for next quick entry
 					try { document.getElementById('record-channel').focus(); } catch (e) {}
@@ -1051,13 +1086,27 @@ function calculateRespawnTimes(killISO, bossRule) {
 		thead.appendChild(headerRow);
 		table.appendChild(thead);
 		const tbody = el('tbody');
+
+		// helper: format record timestamp compactly
+		function formatRecordDate(tsInput) {
+			const d = new Date(tsInput);
+			if (isNaN(d)) return '—';
+			const now = new Date();
+			if (d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()) {
+				return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
+			}
+			const mm = (d.getMonth() + 1).toString().padStart(2, '0');
+			const dd = d.getDate().toString().padStart(2, '0');
+			const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
+			return `${mm}/${dd} ${time}`;
+		}
+
 		rows.forEach(r => {
 			// compute respawn using boss rule if available
 			const boss = BOSSES.find(b => b.id === r.bossId);
 			const resp = boss ? calculateRespawnTimes(r.timestamp, boss) : { humanReadable: '—' };
-			// format timestamp in 24-hour format
-			const ts = new Date(r.timestamp);
-			const tsDisplay = isNaN(ts) ? '—' : ts.toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+			// format timestamp compactly: today -> HH:mm, otherwise MM/DD HH:mm
+			const tsDisplay = formatRecordDate(r.timestamp);
 
 			// determine respawn status color class
 			let respClass = '';
@@ -1083,10 +1132,12 @@ function calculateRespawnTimes(killISO, bossRule) {
 			} catch (e) { /* ignore */ }
 
 			const tr = el('tr', {},
+				// when viewing all bosses, include boss name as first column; el() will ignore null children
+				!bossId ? el('td', {}, (BOSSES.find(bx => bx.id === r.bossId) || { name: r.bossId }).name) : null,
 				el('td', {}, tsDisplay),
 				el('td', {}, String(r.channel)),
 				el('td', {}, r.looted ? '是' : '否'),
-				el('td', {}, r.note || ''),
+				el('td', {class: 'note'}, r.note || ''),
 				el('td', {class: respClass}, resp.humanReadable || '—'),
 				el('td', {},
 					el('button', {type: 'button', 'data-id': r.id, class: 'btn-small delete-btn'}, '刪除'),
