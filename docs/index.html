@@ -9,6 +9,15 @@
 </head>
 <body>
   <!-- Source snapshot of the app (archived in src/) -->
+  <!-- Header: site title + theme toggle (moved from sidebar) -->
+  <div class="app-header" style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
+    <div style="font-weight:700">Artale Boss Timer</div>
+    <div>
+      <label for="theme-toggle" style="margin:0 8px 0 0;font-size:0.95rem;color:inherit">主題</label>
+      <button id="theme-toggle" type="button" class="btn-small" aria-pressed="false">切換主題</button>
+    </div>
+  </div>
+
   <div class="container">
     <h2>Boss 資料檢視（範例）</h2>
     <p>載入自 <code>docs/bosses/bosses.json</code> — 此為示範頁面，圖片為佔位圖。</p>
@@ -29,30 +38,28 @@
     </div>
 
     <div class="row">
-      <div class="col s12 m4">
+      <!-- 左側：監控主視覺（70%） -->
+      <div class="col s12 m8">
         <div id="app">
           <section class="card" style="padding:12px;margin-bottom:12px">
-            <h5>選擇 Boss</h5>
-            <p style="margin:0 0 8px 0;color:#666">可在下方下拉選單或搜尋快速過濾 Boss 名稱</p>
-            <div id="boss-select-root">
-              <select id="boss-dropdown" style="width:100%;margin-top:8px"></select>
-            </div>
+            <h5>即時戰況監控</h5>
+            <p style="margin:0 0 8px 0;color:#666">點擊右側的快速紀錄或在卡片上按下「⚔️ 紀錄擊殺」</p>
+            <div id="monitor-root" style="max-height:520px;overflow:auto"></div>
           </section>
           <section class="card" style="padding:12px;">
-            <h6 style="margin-top:0">精簡 Boss 列表</h6>
-            <div id="boss-list-compact" style="max-height:300px;overflow:auto"></div>
+            <h5 style="margin-top:0">近期擊殺歷史紀錄</h5>
+            <div id="records-root"></div>
           </section>
         </div>
       </div>
-      <div class="col s12 m8">
-        <section class="card" style="padding:16px;margin-bottom:12px">
-          <h5>擊殺紀錄（快速新增）</h5>
+      <!-- 右側：快速作業區（30%） -->
+      <div class="col s12 m4">
+        <aside id="sidebar" class="card sidebar-sticky" style="padding:12px;">
+          <h5 style="margin-top:0">快速紀錄 / 工具</h5>
           <div id="record-form-root"></div>
-        </section>
-        <section class="card" style="padding:16px;margin-top:12px">
-          <h5>紀錄清單</h5>
-          <div id="records-root"></div>
-        </section>
+          <!-- theme toggle moved to header -->
+          <!-- 已移除：右下舊的快速篩選 / Boss 列表（以精簡右側操作區） -->
+        </aside>
       </div>
     </div>
   </div>

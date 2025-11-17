@@ -1,0 +1,26 @@
+{
+  "name": "artalebosstimer",
+  "version": "1.0.0",
+  "description": "一個簡單好上手的 Boss 擊殺紀錄工具，幫助你記錄每次擊殺、追蹤已出貨狀態，並自動預估下一次復活時間。",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/elfhermit/ArtaleBossTimer.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/elfhermit/ArtaleBossTimer/issues"
+  },
+  "homepage": "https://github.com/elfhermit/ArtaleBossTimer#readme",
+  "devDependencies": {
+    "playwright": "^1.56.1"
+  }
+}

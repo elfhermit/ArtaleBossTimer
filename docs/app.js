@@ -113,6 +113,7 @@ function calculateRespawnTimes(killISO, bossRule) {
 		const calcResult = document.getElementById('calc-result');
 		const recordFormRoot = document.getElementById('record-form-root');
 		const recordsRoot = document.getElementById('records-root');
+		const monitorRoot = document.getElementById('monitor-root');
 		let BOSSES = [];
 
 		// ensure an aria-live region exists for screen-reader announcements
@@ -186,6 +187,47 @@ function calculateRespawnTimes(killISO, bossRule) {
 		}
 
 		// --- render helpers ---
+
+		// --- Theme toggle helpers ---
+		function applyTheme(theme) {
+			try {
+				if (!theme || theme === 'light') {
+					document.body.classList.remove('theme-dark');
+					localStorage.setItem('abt_theme', 'light');
+					const btn = document.getElementById('theme-toggle'); if (btn) {
+						btn.setAttribute('aria-pressed','false');
+						btn.title = '目前主題：淺色 / 切換至深色';
+						btn.innerHTML = '<strong style="font-size:1.0em">🌞</strong> / 🌙';
+						btn.classList.remove('theme-active');
+					}
+				} else {
+					document.body.classList.add('theme-dark');
+					localStorage.setItem('abt_theme', 'dark');
+					const btn = document.getElementById('theme-toggle'); if (btn) {
+						btn.setAttribute('aria-pressed','true');
+						btn.title = '目前主題：深色 / 切換至淺色';
+						btn.innerHTML = '🌞 / <strong style="font-size:1.0em">🌙</strong>';
+						btn.classList.add('theme-active');
+					}
+				}
+			} catch (e) { /* ignore */ }
+		}
+
+		function initThemeToggle() {
+			try {
+				const stored = localStorage.getItem('abt_theme');
+				if (stored === 'dark') applyTheme('dark'); else applyTheme('light');
+				const btn = document.getElementById('theme-toggle');
+				if (!btn) return;
+				btn.addEventListener('click', () => {
+					const cur = localStorage.getItem('abt_theme') === 'dark' ? 'dark' : 'light';
+					applyTheme(cur === 'dark' ? 'light' : 'dark');
+				});
+				// allow keyboard toggle
+				btn.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); btn.click(); } });
+			} catch (e) {}
+		}
+
 		function renderBosses(list) {
 			// Populate compact dropdown and list (if present) instead of large grid
 			const dropdown = document.getElementById('boss-dropdown');
@@ -234,7 +276,211 @@ function calculateRespawnTimes(killISO, bossRule) {
 			// hide legacy boss-grid if present
 			const grid = document.getElementById('boss-grid');
 			if (grid) grid.style.display = 'none';
+
+			// also update monitor panel if present
+			try {
+				if (typeof renderMonitorPanel === 'function') {
+					// prepare sorted list for monitor: priority -> nextRespawn -> name
+					const stats = {};
+					list.forEach(boss => {
+						try {
+							const rows = PerBossStorage.getRecordsForBoss({ bossId: boss.id }) || [];
+							const latest = rows.slice().sort((a,c)=> new Date(c.timestamp)-new Date(a.timestamp))[0];
+							if (!latest) {
+								stats[boss.id] = { priority: 3, nextTime: Infinity, label: '未紀錄' };
+								return;
+							}
+							const resp = calculateRespawnTimes(latest.timestamp, boss);
+							const now = Date.now();
+							const t0 = resp.times && resp.times[0] ? Date.parse(resp.times[0]) : NaN;
+							const t1 = resp.times && resp.times[1] ? Date.parse(resp.times[1]) : t0;
+							let priority = 3; let label = '';
+							if (!isNaN(t0) && !isNaN(t1)) {
+								if (now > t1) { priority = 0; label = '已復活'; }
+								else if (now >= t0 && now <= t1) { priority = 1; label = '復活中'; }
+								else { priority = 2; label = '冷卻中'; }
+							} else {
+								priority = 3; label = '未知';
+							}
+							stats[boss.id] = { priority, nextTime: isNaN(t0) ? Infinity : t0, label };
+						} catch (e) { stats[boss.id] = { priority: 3, nextTime: Infinity, label: '錯誤' }; }
+					});
+					const sorted = list.slice().sort((a,bossB) => {
+						const sa = stats[a.id] || { priority: 3, nextTime: Infinity };
+						const sb = stats[bossB.id] || { priority: 3, nextTime: Infinity };
+						if (sa.priority !== sb.priority) return sa.priority - sb.priority;
+						if (sa.nextTime !== sb.nextTime) return sa.nextTime - sb.nextTime;
+						return (a.name || '').localeCompare(bossB.name || '');
+					});
+					renderMonitorPanel(sorted);
+				}
+			} catch (e) { /* ignore */ }
+			// ensure auto-refresh is started
+			try { if (typeof startMonitorAutoRefresh === 'function') startMonitorAutoRefresh(); } catch (e) { /* ignore */ }
 	}
+
+		// render the left monitor panel showing boss cards with status/progress
+		function renderMonitorPanel(bosses) {
+			if (!monitorRoot) return;
+			monitorRoot.innerHTML = '';
+			if (!Array.isArray(bosses) || !bosses.length) { monitorRoot.appendChild(el('p', {}, '無可顯示的 Boss')); return; }
+			bosses.forEach(b => {
+					const thumb = el('img', {class: 'monitor-thumb', src: `bosses/${b.image || 'placeholder.svg'}`, alt: b.name, 'data-tip': (b.respawn || ''), 'aria-label': b.name});
+					const wrap = el('div', {class: 'monitor-card', tabindex: '0', role: 'button', 'data-boss-id': b.id},
+						thumb,
+						el('div', {class: 'meta'},
+							el('div', {class: 'boss-name'}, b.name),
+							el('div', {class: 'respawn-status', id: `respawn-${b.id}`}, b.respawn || ''),
+							el('div', {class: 'monitor-progress', id: `progress-${b.id}`}, el('div', {class: 'bar', id: `bar-${b.id}`})),
+							el('div', {class: 'monitor-small', id: `lastkill-${b.id}`}, '')
+						),
+						el('div', {class: 'monitor-actions'},
+							el('button', {type: 'button', class: 'btn-small', 'data-boss-id': b.id}, '⚔️ 紀錄擊殺')
+						)
+					);
+				monitorRoot.appendChild(wrap);
+				// make the whole card keyboard-activatable and click-through to quick-record button
+				try {
+					wrap.addEventListener('keydown', (ev) => {
+						if (ev.key === 'Enter' || ev.key === ' ') {
+							ev.preventDefault();
+							const btn = wrap.querySelector('button[data-boss-id]');
+							if (btn) btn.click();
+						}
+					});
+					// show pointer cursor
+					wrap.style.cursor = 'pointer';
+				} catch (e) {}
+				// populate dynamic info (last kill, respawn, progress)
+				try {
+					const rows = PerBossStorage.getRecordsForBoss({ bossId: b.id }) || [];
+					const latest = rows.slice().sort((a,c)=> new Date(c.timestamp)-new Date(a.timestamp))[0];
+					const lastEl = document.getElementById(`lastkill-${b.id}`);
+					if (latest && lastEl) lastEl.textContent = `上次：${new Date(latest.timestamp).toLocaleString()} (Ch.${latest.channel})`;
+					// compute respawn and percent
+					if (latest) {
+						const resp = calculateRespawnTimes(latest.timestamp, b);
+						const now = Date.now();
+						let t0 = resp.times && resp.times[0] ? Date.parse(resp.times[0]) : NaN;
+						let t1 = resp.times && resp.times[1] ? Date.parse(resp.times[1]) : t0;
+							const statusEl = document.getElementById(`respawn-${b.id}`);
+						if (!isNaN(t0) && !isNaN(t1)) {
+							if (now < t0) {
+								if (statusEl) statusEl.textContent = `冷卻中：${resp.humanReadable}`;
+								// cooling state (neutral gray)
+								wrap.classList.remove('respawn-soon','respawn-ready');
+								wrap.classList.add('respawn-cooling');
+							} else if (now >= t0 && now <= t1) {
+								if (statusEl) statusEl.textContent = `復活中：${resp.humanReadable}`;
+								// within respawn window -> soon (amber)
+								wrap.classList.remove('respawn-cooling','respawn-ready');
+								wrap.classList.add('respawn-soon');
+							} else {
+								if (statusEl) statusEl.textContent = `已復活：${resp.humanReadable}`;
+								// ready (green)
+								wrap.classList.remove('respawn-cooling','respawn-soon');
+								wrap.classList.add('respawn-ready');
+							}
+							// progress: from kill -> earliest
+							const duration = t0 - Date.parse(latest.timestamp);
+							let pct = 0;
+							if (duration > 0) pct = Math.max(0, Math.min(100, Math.round(((now - Date.parse(latest.timestamp)) / duration) * 100)));
+							const bar = document.getElementById(`bar-${b.id}`);
+							if (bar) bar.style.width = `${pct}%`;
+							// also update thumbnail tooltip (data-tip) to show human readable + last kill
+							try { if (thumb) { thumb.setAttribute('data-tip', `${b.respawn || ''} — ${resp.humanReadable || ''}`); thumb.setAttribute('aria-label', `${b.name} ${b.respawn || ''} — ${resp.humanReadable || ''}`); } } catch(e) {}
+						}
+					}
+				} catch (e) { /* ignore */ }
+				// wire quick-record button
+				wrap.querySelectorAll('button[data-boss-id]').forEach(btn => btn.addEventListener('click', (ev) => {
+					const bid = ev.currentTarget.getAttribute('data-boss-id');
+					// set record form boss and set timestamp override to now
+					try { document.getElementById('record-boss').value = bid; } catch (e) {}
+					try { document.getElementById('record-timestamp-iso').value = new Date().toISOString(); } catch (e) {}
+					// update preview display
+					try { const disp = document.getElementById('record-time-display'); if (disp) disp.innerText = `擊殺時間：${new Date().toLocaleString()}`; } catch (e) {}
+					// focus channel
+					try { document.getElementById('record-channel').focus(); } catch (e) {}
+				}));
+			});
+		}
+
+			// Refresh monitor panel dynamic values (progress, status, last kill)
+			function refreshMonitorPanel() {
+				if (!monitorRoot) return;
+				// avoid doing work when tab not visible
+				try { if (document.visibilityState && document.visibilityState !== 'visible') return; } catch (e) {}
+				try {
+					BOSSES.forEach(b => {
+						try {
+							const rows = PerBossStorage.getRecordsForBoss({ bossId: b.id }) || [];
+							const latest = rows[0];
+							const lastEl = document.getElementById(`lastkill-${b.id}`);
+							const statusEl = document.getElementById(`respawn-${b.id}`);
+							const bar = document.getElementById(`bar-${b.id}`);
+							if (latest) {
+								if (lastEl) lastEl.textContent = `上次：${new Date(latest.timestamp).toLocaleString()} (Ch.${latest.channel})`;
+								const resp = calculateRespawnTimes(latest.timestamp, b);
+								const now = Date.now();
+								let t0 = resp.times && resp.times[0] ? Date.parse(resp.times[0]) : NaN;
+								let t1 = resp.times && resp.times[1] ? Date.parse(resp.times[1]) : t0;
+								if (!isNaN(t0) && !isNaN(t1)) {
+									if (now < t0) {
+										if (statusEl) statusEl.textContent = `冷卻中：${resp.humanReadable}`;
+									} else if (now >= t0 && now <= t1) {
+										if (statusEl) statusEl.textContent = `復活中：${resp.humanReadable}`;
+									} else {
+										if (statusEl) statusEl.textContent = `已復活：${resp.humanReadable}`;
+									}
+									// update progress bar from kill -> earliest
+									const duration = t0 - Date.parse(latest.timestamp);
+									let pct = 0;
+									if (duration > 0) pct = Math.max(0, Math.min(100, Math.round(((now - Date.parse(latest.timestamp)) / duration) * 100)));
+									if (bar) bar.style.width = `${pct}%`;
+									// update monitor card semantic class so styles reflect state
+									try {
+										const wrap = document.querySelector(`.monitor-card[data-boss-id="${b.id}"]`);
+										if (wrap) {
+											if (now < t0) { wrap.classList.remove('respawn-soon','respawn-ready'); wrap.classList.add('respawn-cooling'); }
+											else if (now >= t0 && now <= t1) { wrap.classList.remove('respawn-cooling','respawn-ready'); wrap.classList.add('respawn-soon'); }
+											else { wrap.classList.remove('respawn-cooling','respawn-soon'); wrap.classList.add('respawn-ready'); }
+										}
+									} catch (e) {}
+								}
+							} else {
+								if (lastEl) lastEl.textContent = '';
+								if (statusEl) statusEl.textContent = b.respawn || '';
+								if (bar) bar.style.width = '0%';
+							}
+						} catch (e) { /* ignore per-boss errors */ }
+					});
+				} catch (e) { /* ignore */ }
+			}
+
+			// start auto-refresh timer for monitor panel; clears previous timer if exists
+			function startMonitorAutoRefresh() {
+				try { if (window.__abt_monitor_timer) clearInterval(window.__abt_monitor_timer); } catch (e) {}
+				// ensure we don't attach multiple visibility handlers
+				try { if (window.__abt_monitor_visibility_handler) document.removeEventListener('visibilitychange', window.__abt_monitor_visibility_handler); } catch (e) {}
+
+				function startTimer() { try { if (!window.__abt_monitor_timer) window.__abt_monitor_timer = setInterval(refreshMonitorPanel, 10000); } catch(e) {} }
+				function stopTimer() { try { if (window.__abt_monitor_timer) { clearInterval(window.__abt_monitor_timer); window.__abt_monitor_timer = null; } } catch(e) {} }
+
+				// start or stop based on current visibility
+				try {
+					if (document.visibilityState && document.visibilityState === 'visible') startTimer();
+				} catch(e) { startTimer(); }
+
+				// expose handler so we can remove it on re-init
+				window.__abt_monitor_visibility_handler = function() {
+					try {
+						if (document.visibilityState === 'visible') startTimer(); else stopTimer();
+					} catch(e) {}
+				};
+				try { document.addEventListener('visibilitychange', window.__abt_monitor_visibility_handler); } catch(e) {}
+			}
+
 
 	function prefillCalculator(boss) {
 		// populate calculator form with selected boss
@@ -249,69 +495,35 @@ function calculateRespawnTimes(killISO, bossRule) {
 		// remember last selected boss
 		try { localStorage.setItem('abt_lastBoss', boss.id); } catch (e) {}
 
-		// update a visible preview near the record form so user clearly sees the selected boss
+		// update visible preview inside the record card
 		try {
-			const root = document.getElementById('record-form-root');
-			if (root) {
-				let prev = document.getElementById('selected-boss-preview');
-				const text = `${boss.name}${boss.minMinutes != null ? `（${boss.minMinutes}~${boss.maxMinutes}分）` : ''}`;
-				if (!prev) {
-					prev = document.createElement('div');
-					prev.id = 'selected-boss-preview';
-					prev.style.margin = '6px 0 12px 0';
-					prev.style.padding = '6px 10px';
-					prev.style.background = '#fafafa';
-					prev.style.border = '1px solid #eee';
-					prev.style.borderRadius = '6px';
-					prev.style.color = '#333';
-					// add container for name + countdown + change button
-					prev.innerHTML = '<span id="selected-boss-name"></span> <span id="selected-boss-countdown" style="margin-left:8px;color:#666"></span>';
-					const changeBtn = document.createElement('button');
-					changeBtn.id = 'abt-change-boss';
-					changeBtn.type = 'button';
-					changeBtn.className = 'btn-small grey';
-					changeBtn.style.marginLeft = '12px';
-					changeBtn.textContent = '更改';
-					changeBtn.addEventListener('click', () => {
-						// toggle visibility of the record-boss select
-						const sel = document.getElementById('record-boss');
-						if (!sel) return;
-						if (sel.classList.contains('abt-hidden-select')) {
-							sel.classList.remove('abt-hidden-select');
-							sel.focus();
-						} else {
-							sel.classList.add('abt-hidden-select');
-						}
-					});
-					prev.appendChild(changeBtn);
-					root.insertBefore(prev, root.firstChild);
-				}
-				// set name
-				document.getElementById('selected-boss-name').textContent = `已選： ${text}`;
-
-				// countdown to earliest respawn from now (use minMinutes if provided)
-				try { window.__abt_preview_timer && clearInterval(window.__abt_preview_timer); } catch (e) {}
-				const cdEl = document.getElementById('selected-boss-countdown');
-				if (boss.minMinutes != null) {
-					const next = new Date(Date.now() + boss.minMinutes * 60000);
-					function updateCountdown() {
-						const diff = next.getTime() - Date.now();
-						if (diff <= 0) {
-							cdEl.textContent = '（已達最早復活時間）';
-							document.getElementById('selected-boss-preview').style.background = '#fff3e0';
-							return;
-						}
-						const mins = Math.floor(diff / 60000);
-						const secs = Math.floor((diff % 60000) / 1000);
-						cdEl.textContent = `距離最早復活：${mins}分${secs}秒`;
-						// warning if within 10 minutes
-						if (diff <= 10 * 60000) document.getElementById('selected-boss-preview').style.background = '#fff3e0'; else document.getElementById('selected-boss-preview').style.background = '#fafafa';
+			const text = `${boss.name}${boss.minMinutes != null ? `（${boss.minMinutes}~${boss.maxMinutes}分）` : ''}`;
+			const nameEl = document.getElementById('selected-boss-name');
+			if (nameEl) nameEl.textContent = `已選： ${text}`;
+			// countdown to earliest respawn from now (use minMinutes if provided)
+			try { window.__abt_preview_timer && clearInterval(window.__abt_preview_timer); } catch (e) {}
+			const cdEl = document.getElementById('selected-boss-countdown');
+			if (boss.minMinutes != null && cdEl) {
+				const next = new Date(Date.now() + boss.minMinutes * 60000);
+				function updateCountdown() {
+					const diff = next.getTime() - Date.now();
+					if (diff <= 0) {
+						cdEl.textContent = '（已達最早復活時間）';
+						const prevEl = document.getElementById('selected-boss-preview'); if (prevEl) prevEl.style.background = '#fff3e0';
+						return;
 					}
-					updateCountdown();
-					window.__abt_preview_timer = setInterval(updateCountdown, 1000);
-				} else {
-					cdEl.textContent = '';
+					const mins = Math.floor(diff / 60000);
+					const secs = Math.floor((diff % 60000) / 1000);
+					cdEl.textContent = `距離最早復活：${mins}分${secs}秒`;
+					// warning if within 10 minutes
+					const prevEl = document.getElementById('selected-boss-preview'); if (prevEl) {
+						if (diff <= 10 * 60000) prevEl.style.background = '#fff3e0'; else prevEl.style.background = '#fafafa';
+					}
 				}
+				updateCountdown();
+				window.__abt_preview_timer = setInterval(updateCountdown, 1000);
+			} else {
+				if (cdEl) cdEl.textContent = '';
 			}
 		} catch (e) { /* ignore */ }
 	}
@@ -355,28 +567,33 @@ function calculateRespawnTimes(killISO, bossRule) {
 		// --- record form ---
 		recordFormRoot.innerHTML = '';
 		const rf = el('div', {class: 'card', style: 'padding:12px'},
-			el('h5', {}, '新增擊殺紀錄'),
+			el('h5', {}, '📝 紀錄擊殺'),
+			// selected boss preview placeholder (will be populated by prefillCalculator)
+			el('div', {id: 'selected-boss-preview', style: 'margin:6px 0 12px 0;padding:6px 10px;background:#fafafa;border:1px solid #eee;border-radius:6px;color:#333'},
+				el('span', {id: 'selected-boss-name'}, ''),
+				el('span', {id: 'selected-boss-countdown', style: 'margin-left:8px;color:#666'}, ''),
+				el('button', {id: 'abt-change-boss', type: 'button', class: 'btn-small grey', style: 'margin-left:12px'}, '更改')
+			),
 			el('label', {}, 'Boss：'), el('select', {id: 'record-boss'}, bosses.map(b => el('option', {value: b.id}, b.name))), el('br'),
 			/* 擊殺時間由系統自動生成 (使用新增時刻) */
 			el('p', {id: 'record-time-display', style: 'color:#666;margin:8px 0 0 0;font-size:0.95rem'}, `擊殺時間：${new Date().toLocaleString()}`),
+			// hidden ISO timestamp override (used by ±1 minute)
+			el('input', {type: 'hidden', id: 'record-timestamp-iso'}),
 			el('br'),
 			el('label', {}, '頻道：'), el('input', {id: 'record-channel', type: 'number', min: 1, max: 3000, step: 1, placeholder: '例如 1'}), el('br'),
 			el('label', {}, '是否出貨：')
 		);
 
-		// radio inputs wrapped in labels (Materialize-friendly and reliably clickable)
-		const lootedWrapper = el('div', {style: 'margin-top:8px'});
-		const yesLabel = el('label', {},
-			el('input', {type: 'radio', id: 'looted-yes', name: 'looted', value: 'yes'}),
-			el('span', {}, '是')
+		// looted switch (仿 Material style)
+		const lootedWrapper = el('div', {style: 'margin-top:8px;display:flex;align-items:center;gap:8px'},
+			el('label', {class: 'switch'},
+				el('input', {type: 'checkbox', id: 'looted-toggle'}),
+				el('span', {class: 'slider'})
+			),
+			el('span', {style: 'margin-left:6px'}, '已出貨')
 		);
-		const noLabel = el('label', {},
-			el('input', {type: 'radio', id: 'looted-no', name: 'looted', value: 'no'}),
-			el('span', {}, '否')
-		);
-		lootedWrapper.appendChild(yesLabel);
-		lootedWrapper.appendChild(noLabel);
 		rf.appendChild(lootedWrapper);
+		rf.appendChild(el('br'));
 		rf.appendChild(el('br'));
 
 		rf.appendChild(el('label', {}, '備註：'));
@@ -386,19 +603,134 @@ function calculateRespawnTimes(killISO, bossRule) {
 		rf.appendChild(el('br'));
 		rf.appendChild(el('button', {id: 'record-add', type: 'button', class: 'btn teal'}, '新增紀錄'));
 		rf.appendChild(el('button', {id: 'record-cancel', type: 'button', class: 'btn grey', style: 'margin-left:8px;display:none'}, '取消編輯'));
+		// channel stepper (mixed input) + quick-channels
+		const stepper = el('div', {class: 'channel-control-group', style: 'margin-top:8px'},
+			el('label', {class: 'input-label'}, '頻道'),
+			el('div', {class: 'stepper-wrapper', style: 'display:flex;align-items:center;background:#f5f5f5;border-radius:8px;overflow:hidden;border:1px solid #e6e6e6'},
+				el('button', {type:'button', id: 'channel-dec', class: 'step-btn', style: 'background:#eee;border:none;width:44px;height:40px'}, '❮'),
+				// reuse existing record-channel input for persistence
+				el('input', {id: 'record-channel', type: 'number', min: 1, max: 3000, step: 1, value: 1, class: 'channel-input', style: 'flex:1;background:transparent;border:none;text-align:center;font-size:18px;padding:10px 0;outline:none'}),
+				el('button', {type:'button', id: 'channel-inc', class: 'step-btn', style: 'background:#eee;border:none;width:44px;height:40px'}, '❯')
+			),
+			el('div', {id: 'quick-channels', class: 'quick-channels', style: 'margin-top:8px;display:flex;gap:8px;flex-wrap:wrap'} )
+		);
+		rf.appendChild(stepper);
+
+		// time adjust row: [-1]  時間顯示  [+1]
+		const timeAdjust = el('div', {id: 'time-adjust-row', style: 'margin-top:8px;display:flex;gap:8px;align-items:center;justify-content:flex-start'},
+			el('button', {type: 'button', id: 'minus-1', class: 'btn-small'}, '−1 分'),
+			el('p', {id: 'record-time-display-inline', style: 'color:#666;margin:0;font-size:0.95rem;padding:0 6px'}, `擊殺時間：${new Date().toLocaleString()}`),
+			el('button', {type: 'button', id: 'plus-1', class: 'btn-small'}, '+1 分')
+		);
+		rf.appendChild(timeAdjust);
 		recordFormRoot.appendChild(rf);
+
+		// wire '更改' 按鈕 to toggle visibility of boss select
+		try {
+			const changeBtn = document.getElementById('abt-change-boss');
+			if (changeBtn) changeBtn.addEventListener('click', () => {
+				const sel = document.getElementById('record-boss');
+				if (!sel) return;
+				if (sel.classList.contains('abt-hidden-select')) {
+					sel.classList.remove('abt-hidden-select');
+					sel.focus();
+				} else {
+					sel.classList.add('abt-hidden-select');
+				}
+			});
+		} catch (e) {}
+
+		// wire stepper controls and quick-channels
+		try {
+			function clampChannel(v){ return Math.max(1, Math.min(3000, Number(v)||1)); }
+			const incBtn = document.getElementById('channel-inc');
+			const decBtn = document.getElementById('channel-dec');
+			const chInput = document.getElementById('record-channel');
+			const quickRoot = document.getElementById('quick-channels');
+			if (incBtn && chInput) incBtn.addEventListener('click', ()=>{ chInput.value = clampChannel(Number(chInput.value) + 1); chInput.focus(); renderQuickChannels(); });
+			if (decBtn && chInput) decBtn.addEventListener('click', ()=>{ chInput.value = clampChannel(Number(chInput.value) - 1); chInput.focus(); renderQuickChannels(); });
+			if (chInput) {
+				chInput.addEventListener('input', (ev)=>{ ev.target.value = clampChannel(ev.target.value); });
+				chInput.addEventListener('change', ()=> renderQuickChannels());
+			}
+
+			// recent channels persisted in localStorage key 'abt_recent_channels' as JSON array
+			function getRecentChannels(){ try { return JSON.parse(localStorage.getItem('abt_recent_channels')||'[]'); } catch(e){ return []; } }
+			function saveRecentChannels(arr){ try { localStorage.setItem('abt_recent_channels', JSON.stringify(arr)); } catch(e){} }
+			function addRecentChannel(n){ try { const arr = getRecentChannels().filter(x=>x!==n); arr.unshift(n); if (arr.length>8) arr.length = 8; saveRecentChannels(arr); } catch(e){} }
+
+			function renderQuickChannels(){
+				if (!quickRoot) return;
+				quickRoot.innerHTML = '';
+				const arr = getRecentChannels();
+				if (!arr.length) return;
+				arr.forEach(ch => {
+					const chip = el('button', {type:'button', class:'quick-chip btn-small grey', 'data-channel': String(ch)}, String(ch));
+					chip.addEventListener('click', ()=>{ const input = document.getElementById('record-channel'); if (input) { input.value = clampChannel(ch); input.focus(); } });
+					quickRoot.appendChild(chip);
+				});
+			}
+			// initial render
+			renderQuickChannels();
+		} catch (e) { /* ignore */ }
+
+		// time adjust handlers: modify hidden ISO and display
+		function ensureTimestampOverrideExists() {
+			let isoEl = document.getElementById('record-timestamp-iso');
+			if (!isoEl) return null;
+			let iso = isoEl.value;
+			if (!iso) {
+				iso = new Date().toISOString();
+				isoEl.value = iso;
+			}
+			return isoEl;
+		}
+		try {
+			// helper to adjust kill time by minutes
+			function adjustKillTime(deltaMinutes) {
+				try {
+					const isoEl = ensureTimestampOverrideExists();
+					if (!isoEl) return;
+					const dt = new Date(isoEl.value);
+					dt.setMinutes(dt.getMinutes() + deltaMinutes);
+					isoEl.value = dt.toISOString();
+					// update both display DOM nodes
+					const disp = document.getElementById('record-time-display'); if (disp) disp.innerText = `擊殺時間：${dt.toLocaleString()}`;
+					const dispInline = document.getElementById('record-time-display-inline'); if (dispInline) dispInline.innerText = `擊殺時間：${dt.toLocaleString()}`;
+				} catch (e) { /* ignore */ }
+			}
+
+			document.getElementById('minus-1').addEventListener('click', () => adjustKillTime(-1));
+			document.getElementById('plus-1').addEventListener('click', () => adjustKillTime(1));
+
+			// keyboard shortcuts: when user focuses inside record form, ArrowUp = +1, ArrowDown = -1
+			try {
+				const formRoot = document.getElementById('record-form-root');
+				if (formRoot) {
+					formRoot.addEventListener('keydown', (ev) => {
+						if (ev.key === 'ArrowUp') { ev.preventDefault(); adjustKillTime(1); }
+						if (ev.key === 'ArrowDown') { ev.preventDefault(); adjustKillTime(-1); }
+					});
+				}
+			} catch(e) {}
+		} catch (e) { /* ignore if controls missing */ }
 
 		// build filters UI placeholder (will be filled by buildFiltersUI)
 		const filtersRoot = document.getElementById('filters-root');
 		if (filtersRoot) filtersRoot.innerHTML = '';
 
-		// default looted to '否' to reduce accidental validation failures
-	try { document.getElementById('looted-no').checked = true; } catch (e) { /* ignore if not present */ }
+		// default looted toggle to unchecked (否) and set aria state
+	try { const lt = document.getElementById('looted-toggle'); if (lt) { lt.checked = false; lt.setAttribute('aria-checked', 'false'); lt.addEventListener('change', () => lt.setAttribute('aria-checked', lt.checked ? 'true' : 'false')); } } catch (e) { /* ignore */ }
 		// update display time periodically while form is open (optional)
 		try {
 			const disp = document.getElementById('record-time-display');
 			if (disp) {
-				setInterval(() => { try { disp.innerText = `擊殺時間：${new Date().toLocaleString()}`; } catch(e){} }, 60000);
+				setInterval(() => { try {
+					// if user has an ISO override, reflect that value; otherwise show now
+					const isoEl = document.getElementById('record-timestamp-iso');
+					if (isoEl && isoEl.value) disp.innerText = `擊殺時間：${new Date(isoEl.value).toLocaleString()}`;
+					else disp.innerText = `擊殺時間：${new Date().toLocaleString()}`;
+				} catch(e){} }, 60000);
 			}
 		} catch(e) {}
 
@@ -422,8 +754,7 @@ function calculateRespawnTimes(killISO, bossRule) {
 			document.getElementById('record-id').value = '';
 			document.getElementById('record-note').value = '';
 			document.getElementById('record-channel').value = '';
-			document.getElementById('looted-yes').checked = false;
-			document.getElementById('looted-no').checked = false;
+			try { const lt = document.getElementById('looted-toggle'); if (lt) { lt.checked = false; lt.setAttribute('aria-checked', 'false'); } } catch(e) {}
 			document.getElementById('record-add').innerText = '新增紀錄';
 			// hide cancel edit button
 			try { document.getElementById('record-cancel').style.display = 'none'; } catch (e) {}
@@ -433,10 +764,11 @@ function calculateRespawnTimes(killISO, bossRule) {
 
 		recordAddBtn.addEventListener('click', () => {
 			const bossId = document.getElementById('record-boss').value;
-			// timestamp is set automatically to now for new records
-			const t = new Date().toISOString();
+			// timestamp: prefer override if user adjusted time, otherwise now
+			const isoOverrideEl = document.getElementById('record-timestamp-iso');
+			const t = (isoOverrideEl && isoOverrideEl.value) ? isoOverrideEl.value : new Date().toISOString();
 			const channel = document.getElementById('record-channel').value;
-			const looted = document.getElementById('looted-yes').checked ? true : (document.getElementById('looted-no').checked ? false : null);
+			const looted = !!(document.getElementById('looted-toggle') && document.getElementById('looted-toggle').checked);
 			const note = document.getElementById('record-note').value.trim();
 			const editId = document.getElementById('record-id').value;
 			// validation (show inline)
@@ -444,7 +776,6 @@ function calculateRespawnTimes(killISO, bossRule) {
 			if (!bossId) errors.push('請選擇 Boss');
 			const chNum = Number(channel);
 			if (!channel || isNaN(chNum) || !Number.isInteger(chNum) || chNum < 1 || chNum > 3000) errors.push('頻道請輸入 1..3000 的整數');
-			if (looted == null) errors.push('請選擇是否出貨');
 			if (note.length > 200) errors.push('備註不可超過 200 字');
 			const statusEl = document.getElementById('record-status');
 			if (errors.length) { if (statusEl) statusEl.innerHTML = errors.join('<br/>'); else showToast(errors.join('<br/>'), { classes: 'red darken-1 white-text' }); return; }
@@ -468,6 +799,21 @@ function calculateRespawnTimes(killISO, bossRule) {
 					document.getElementById('record-channel').value = '';
 					// remember last boss
 					try { localStorage.setItem('abt_lastBoss', bossId); } catch (e) {}
+					// add to recent channels list (persist up to 8)
+					try {
+						const rcKey = 'abt_recent_channels';
+						const cur = JSON.parse(localStorage.getItem(rcKey) || '[]');
+						const chStr = String(chNum);
+						const filtered = cur.filter(x => x !== chStr);
+						filtered.unshift(chStr);
+						if (filtered.length > 8) filtered.length = 8;
+						localStorage.setItem(rcKey, JSON.stringify(filtered));
+						// re-render quick channels if present
+						try { const quickRoot = document.getElementById('quick-channels'); if (quickRoot && typeof quickRoot.innerHTML !== 'undefined') {
+							// rebuild via existing render handler by triggering change event
+							const evt = new Event('change'); document.getElementById('record-channel').dispatchEvent(evt);
+						} } catch(e) {}
+					} catch(e) {}
 					showToast('新增完成', { classes: 'green darken-1' });
 					// focus channel for next quick entry
 					try { document.getElementById('record-channel').focus(); } catch (e) {}
@@ -740,13 +1086,27 @@ function calculateRespawnTimes(killISO, bossRule) {
 		thead.appendChild(headerRow);
 		table.appendChild(thead);
 		const tbody = el('tbody');
+
+		// helper: format record timestamp compactly
+		function formatRecordDate(tsInput) {
+			const d = new Date(tsInput);
+			if (isNaN(d)) return '—';
+			const now = new Date();
+			if (d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()) {
+				return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
+			}
+			const mm = (d.getMonth() + 1).toString().padStart(2, '0');
+			const dd = d.getDate().toString().padStart(2, '0');
+			const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
+			return `${mm}/${dd} ${time}`;
+		}
+
 		rows.forEach(r => {
 			// compute respawn using boss rule if available
 			const boss = BOSSES.find(b => b.id === r.bossId);
 			const resp = boss ? calculateRespawnTimes(r.timestamp, boss) : { humanReadable: '—' };
-			// format timestamp in 24-hour format
-			const ts = new Date(r.timestamp);
-			const tsDisplay = isNaN(ts) ? '—' : ts.toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+			// format timestamp compactly: today -> HH:mm, otherwise MM/DD HH:mm
+			const tsDisplay = formatRecordDate(r.timestamp);
 
 			// determine respawn status color class
 			let respClass = '';
@@ -772,10 +1132,12 @@ function calculateRespawnTimes(killISO, bossRule) {
 			} catch (e) { /* ignore */ }
 
 			const tr = el('tr', {},
+				// when viewing all bosses, include boss name as first column; el() will ignore null children
+				!bossId ? el('td', {}, (BOSSES.find(bx => bx.id === r.bossId) || { name: r.bossId }).name) : null,
 				el('td', {}, tsDisplay),
 				el('td', {}, String(r.channel)),
 				el('td', {}, r.looted ? '是' : '否'),
-				el('td', {}, r.note || ''),
+				el('td', {class: 'note'}, r.note || ''),
 				el('td', {class: respClass}, resp.humanReadable || '—'),
 				el('td', {},
 					el('button', {type: 'button', 'data-id': r.id, class: 'btn-small delete-btn'}, '刪除'),
@@ -819,7 +1181,7 @@ function calculateRespawnTimes(killISO, bossRule) {
 					// show the original kill time in the read-only display
 					try { const disp = document.getElementById('record-time-display'); if (disp) disp.innerText = `擊殺時間：${dt.toLocaleString()}`; } catch(e) {}
 					document.getElementById('record-channel').value = String(rec.channel);
-					if (rec.looted) document.getElementById('looted-yes').checked = true; else document.getElementById('looted-no').checked = true;
+					try { const lt = document.getElementById('looted-toggle'); if (lt) { lt.checked = !!rec.looted; lt.setAttribute('aria-checked', lt.checked ? 'true' : 'false'); } } catch(e) {}
 					document.getElementById('record-note').value = rec.note || '';
 					document.getElementById('record-add').innerText = '儲存修改';
 					// show cancel button while editing
@@ -840,8 +1202,10 @@ function calculateRespawnTimes(killISO, bossRule) {
 	// --- fetch bosses and initialize UI ---
 	fetch('bosses/bosses.json')
 		.then(r => r.json())
-		.then(bosses => {
-			BOSSES = bosses;
+		    .then(bosses => {
+			    // initialize theme toggle (before UI renders) to apply body class early
+			    try { initThemeToggle(); } catch (e) {}
+			    BOSSES = bosses;
 			renderBosses(bosses);
 			buildCalculatorAndRecordUI(bosses);
 			// if there was a previously selected boss, call prefill to show preview and highlight

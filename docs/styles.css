@@ -1,5 +1,17 @@
 /* Minimal styles to improve readability */
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', 'Helvetica Neue', Arial; }
+
+:root {
+	--monitor-thumb-size: 56px;
+	--monitor-thumb-radius: 8px;
+	--switch-width: 44px;
+	--switch-height: 24px;
+	--switch-knob: 18px;
+	--switch-bg: #ccc;
+	--switch-checked-bg: linear-gradient(90deg,#66bb6a,#43a047);
+	--ui-bg: #ffffff;
+	--ui-text: #222;
+}
 .card { box-shadow: 0 1px 3px rgba(0,0,0,0.08); border-radius: 6px; }
 .chip { display:inline-block; padding:6px 10px; border-radius:16px; background:#eee; font-size:0.9rem; }
 .btn-small { padding:4px 8px; font-size:0.75rem; }
@@ -48,3 +60,126 @@ table .btn-small { padding: 4px 6px; font-size: 0.75rem; }
 .respawn-soon::before, .respawn-ready::before { content: ''; display:inline-block; width:10px; height:10px; margin-right:8px; vertical-align:middle; border-radius:2px; }
 .respawn-soon::before { background: #ffb74d; }
 .respawn-ready::before { background: #66bb6a; }
+
+/* sidebar sticky for quick actions */
+.sidebar-sticky { position: -webkit-sticky; position: sticky; top: 20px; }
+
+/* monitor card styles */
+.monitor-card { display:flex; gap:12px; align-items:center; padding:10px; border-bottom:1px solid #f1f1f1; }
+.monitor-card .meta { flex:1; }
+.monitor-card .boss-name { font-weight:700; margin-bottom:4px; }
+.monitor-card .respawn-status { font-size:0.9rem; color:#666; margin-bottom:6px; }
+.monitor-progress { height:10px; background:#eee; border-radius:6px; overflow:hidden; }
+/* default bar: neutral (cooling) */
+.monitor-progress > .bar { height:100%; background: linear-gradient(90deg,#e0e0e0,#bdbdbd); width:0%; transition:width 0.5s ease; }
+/* semantic color variants applied via class on .monitor-card */
+.monitor-card.respawn-cooling .bar { background: linear-gradient(90deg,#bdbdbd,#9e9e9e); }
+.monitor-card.respawn-soon .bar { background: linear-gradient(90deg,#ffd54f,#ffb74d); }
+.monitor-card.respawn-ready .bar { background: linear-gradient(90deg,#66bb6a,#43a047); }
+.monitor-actions { display:flex; gap:8px; align-items:center; }
+.monitor-small { font-size:0.85rem; color:#444; }
+
+/* monitor thumbnail */
+.monitor-thumb { width:var(--monitor-thumb-size); height:var(--monitor-thumb-size); object-fit:cover; border-radius:var(--monitor-thumb-radius); flex:0 0 var(--monitor-thumb-size); transition: transform 0.2s cubic-bezier(.2,.9,.2,1), box-shadow 0.2s ease; }
+.monitor-card:hover .monitor-thumb { box-shadow: 0 10px 30px rgba(0,0,0,0.16); transform: translateY(-4px); }
+
+/* make monitor card clearly interactive and focusable */
+.monitor-card { transition: box-shadow 0.18s ease, transform 0.12s ease; }
+.monitor-card:focus { outline: 3px solid rgba(66,165,245,0.12); outline-offset: 2px; }
+.monitor-card:hover { box-shadow: 0 6px 20px rgba(15,23,36,0.06); }
+
+/* simple status highlight on card when respawn-ready / soon - applied via class on respawn cell or could be mirrored */
+.respawn-ready + .monitor-actions, .monitor-card.respawn-ready { box-shadow: 0 0 0 3px rgba(102,187,106,0.06); }
+.respawn-soon + .monitor-actions, .monitor-card.respawn-soon { box-shadow: 0 0 0 3px rgba(255,183,77,0.06); }
+
+/* custom tooltip for thumbnails using data-tip */
+.monitor-thumb { position: relative; }
+.monitor-thumb::after { content: attr(data-tip); position: absolute; left: 50%; transform: translateX(-50%) translateY(-6px); bottom: 110%; background: rgba(0,0,0,0.8); color: #fff; padding:6px 8px; border-radius:6px; font-size:12px; white-space:nowrap; opacity:0; pointer-events:none; transition: opacity .12s ease, transform .12s ease; z-index: 60; }
+.monitor-thumb:hover::after, .monitor-thumb:focus::after { opacity: 1; transform: translateX(-50%) translateY(-10px); }
+
+/* Material-like switch */
+.switch { position: relative; display: inline-block; width:var(--switch-width); height:var(--switch-height); }
+.switch input { opacity:0; width:0; height:0; position:absolute; left:0; top:0 }
+.switch .slider { position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:var(--switch-bg); transition: background .22s ease, box-shadow .18s ease; border-radius:999px; }
+.switch .slider::before { content: ''; position: absolute; height:var(--switch-knob); width:var(--switch-knob); left:calc((var(--switch-height) - var(--switch-knob)) / 2); top:calc((var(--switch-height) - var(--switch-knob)) / 2); background:white; transition: transform .22s cubic-bezier(.2,.9,.2,1); border-radius:50%; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+.switch input:checked + .slider { background: var(--switch-checked-bg); }
+.switch input:checked + .slider::before { transform: translateX(calc(var(--switch-width) - var(--switch-height))); }
+
+/* subtle fade-in when inserted */
+.switch, .monitor-thumb { opacity: 0; transform-origin: center; animation: abt-fade-in 220ms ease forwards; }
+@keyframes abt-fade-in { from { opacity: 0; transform: translateY(4px) scale(.995); } to { opacity:1; transform: translateY(0) scale(1); } }
+
+/* accessibility focus ring */
+.switch input:focus + .slider { box-shadow: 0 0 0 5px rgba(66,165,245,0.12); }
+
+/* dark mode adjustments (temporarily disabled)
+@media (prefers-color-scheme: dark) {
+	/* this block is intentionally left commented-out above; instead we provide a class-based dark theme below */
+}
+*/
+
+/* class-based dark theme (apply by adding `theme-dark` to <body>) */
+.theme-dark { --ui-bg: #0f1720; --ui-text: #e6eef6; --switch-bg: #2b2f36; }
+.theme-dark body, .theme-dark { background: var(--ui-bg); color: var(--ui-text); }
+.theme-dark .card { background: #0b1116; box-shadow: 0 1px 6px rgba(0,0,0,0.6); }
+.theme-dark .monitor-card { border-bottom: 1px solid rgba(255,255,255,0.04); }
+.theme-dark .monitor-small, .theme-dark .monitor-card .respawn-status { color: #cbd5e1; }
+
+/* slight spacing for monitor card actions */
+.monitor-actions { display:flex; gap:8px; align-items:center; }
+
+/* mobile optimizations */
+@media (max-width: 520px) {
+	:root { --monitor-thumb-size: 44px; --switch-width: 40px; --switch-height: 22px; --switch-knob: 16px; }
+	.monitor-card { gap:10px; padding:8px; }
+	.monitor-card .boss-name { font-size: 0.98rem; }
+	.monitor-small { font-size:0.8rem; }
+	.monitor-actions { gap:6px; }
+}
+
+/* channel chip-like buttons in record form */
+#record-form-root .btn-small[data-channel] {
+	background: #f3f4f6;
+	border: 1px solid rgba(0,0,0,0.06);
+	color: #111;
+	border-radius: 999px;
+	padding: 6px 10px;
+	min-width: 40px;
+	box-shadow: none;
+}
+#record-form-root .btn-small[data-channel].active {
+	background: #bb86fc;
+	color: #000;
+	border-color: #bb86fc;
+}
+
+/* stepper + quick-channels styles */
+.channel-control-group { margin-bottom: 12px; }
+.input-label { display:block; color:#666; font-size:12px; margin-bottom:6px; }
+.stepper-wrapper { display:flex; align-items:center; border-radius:8px; overflow:hidden; }
+.stepper-wrapper .step-btn { background:#f3f4f6; border:none; width:44px; height:40px; cursor:pointer; }
+.stepper-wrapper .channel-input { flex:1; background:transparent; border:none; text-align:center; font-size:18px; padding:10px 0; outline:none; }
+.quick-channels { display:flex; gap:8px; flex-wrap:wrap; }
+.quick-chip { background:#f3f4f6; color:#333; padding:6px 10px; border-radius:999px; border:1px solid rgba(0,0,0,0.06); cursor:pointer; }
+.quick-chip:hover { background:#e9e9e9; }
+
+/* time adjust inline display */
+#time-adjust-row { margin-top:8px; display:flex; gap:8px; align-items:center; }
+#record-time-display-inline { color:#666; margin:0; font-size:0.95rem; padding:0 6px; }
+.btn-small { padding:6px 10px; }
+
+/* Header styling (simple, keeps contrast) */
+.app-header { background: var(--ui-bg); border-bottom: 1px solid rgba(0,0,0,0.06); }
+.app-header div { display:flex; align-items:center; gap:8px; }
+
+/* Compact records table styling: reduce padding, font-size and prevent wrapping */
+#records-root table th, #records-root table td { padding: 6px 8px; font-size: 13px; vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#records-root table tbody tr { height: 40px; }
+#records-root table tbody td.note { max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#records-root table { table-layout: fixed; width: 100%; }
+
+/* make action buttons denser */
+#records-root table td button.btn-small { padding: 4px 6px; font-size: 0.72rem; }
+
+/* ensure respawn human-readable cell doesn't wrap too much */
+#records-root table td.respawn-soon, #records-root table td.respawn-ready { max-width: 200px; white-space: nowrap; }
