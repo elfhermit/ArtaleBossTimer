@@ -284,8 +284,8 @@ function calculateRespawnTimes(killISO, bossRule) {
 			monitorRoot.innerHTML = '';
 			if (!Array.isArray(bosses) || !bosses.length) { monitorRoot.appendChild(el('p', {}, '無可顯示的 Boss')); return; }
 			bosses.forEach(b => {
-					const thumb = el('img', {class: 'monitor-thumb', src: `bosses/${b.image || 'placeholder.svg'}`, alt: b.name, title: b.respawn || ''});
-					const wrap = el('div', {class: 'monitor-card'},
+					const thumb = el('img', {class: 'monitor-thumb', src: `bosses/${b.image || 'placeholder.svg'}`, alt: b.name, 'data-tip': (b.respawn || ''), 'aria-label': b.name});
+					const wrap = el('div', {class: 'monitor-card', tabindex: '0', role: 'button'},
 						thumb,
 						el('div', {class: 'meta'},
 							el('div', {class: 'boss-name'}, b.name),
@@ -298,6 +298,18 @@ function calculateRespawnTimes(killISO, bossRule) {
 						)
 					);
 				monitorRoot.appendChild(wrap);
+				// make the whole card keyboard-activatable and click-through to quick-record button
+				try {
+					wrap.addEventListener('keydown', (ev) => {
+						if (ev.key === 'Enter' || ev.key === ' ') {
+							ev.preventDefault();
+							const btn = wrap.querySelector('button[data-boss-id]');
+							if (btn) btn.click();
+						}
+					});
+					// show pointer cursor
+					wrap.style.cursor = 'pointer';
+				} catch (e) {}
 				// populate dynamic info (last kill, respawn, progress)
 				try {
 					const rows = PerBossStorage.getRecordsForBoss({ bossId: b.id }) || [];
@@ -325,8 +337,8 @@ function calculateRespawnTimes(killISO, bossRule) {
 							if (duration > 0) pct = Math.max(0, Math.min(100, Math.round(((now - Date.parse(latest.timestamp)) / duration) * 100)));
 							const bar = document.getElementById(`bar-${b.id}`);
 							if (bar) bar.style.width = `${pct}%`;
-							// also update thumbnail tooltip to show human readable + last kill
-							try { if (thumb) thumb.title = `${b.respawn || ''} — ${resp.humanReadable || ''}`; } catch(e) {}
+							// also update thumbnail tooltip (data-tip) to show human readable + last kill
+							try { if (thumb) { thumb.setAttribute('data-tip', `${b.respawn || ''} — ${resp.humanReadable || ''}`); thumb.setAttribute('aria-label', `${b.name} ${b.respawn || ''} — ${resp.humanReadable || ''}`); } } catch(e) {}
 						}
 					}
 				} catch (e) { /* ignore */ }
@@ -621,8 +633,8 @@ function calculateRespawnTimes(killISO, bossRule) {
 		const filtersRoot = document.getElementById('filters-root');
 		if (filtersRoot) filtersRoot.innerHTML = '';
 
-		// default looted toggle to unchecked (否)
-	try { const lt = document.getElementById('looted-toggle'); if (lt) lt.checked = false; } catch (e) { /* ignore */ }
+		// default looted toggle to unchecked (否) and set aria state
+	try { const lt = document.getElementById('looted-toggle'); if (lt) { lt.checked = false; lt.setAttribute('aria-checked', 'false'); lt.addEventListener('change', () => lt.setAttribute('aria-checked', lt.checked ? 'true' : 'false')); } } catch (e) { /* ignore */ }
 		// update display time periodically while form is open (optional)
 		try {
 			const disp = document.getElementById('record-time-display');
@@ -656,7 +668,7 @@ function calculateRespawnTimes(killISO, bossRule) {
 			document.getElementById('record-id').value = '';
 			document.getElementById('record-note').value = '';
 			document.getElementById('record-channel').value = '';
-			try { const lt = document.getElementById('looted-toggle'); if (lt) lt.checked = false; } catch(e) {}
+			try { const lt = document.getElementById('looted-toggle'); if (lt) { lt.checked = false; lt.setAttribute('aria-checked', 'false'); } } catch(e) {}
 			document.getElementById('record-add').innerText = '新增紀錄';
 			// hide cancel edit button
 			try { document.getElementById('record-cancel').style.display = 'none'; } catch (e) {}
@@ -1052,7 +1064,7 @@ function calculateRespawnTimes(killISO, bossRule) {
 					// show the original kill time in the read-only display
 					try { const disp = document.getElementById('record-time-display'); if (disp) disp.innerText = `擊殺時間：${dt.toLocaleString()}`; } catch(e) {}
 					document.getElementById('record-channel').value = String(rec.channel);
-					try { const lt = document.getElementById('looted-toggle'); if (lt) lt.checked = !!rec.looted; } catch(e) {}
+					try { const lt = document.getElementById('looted-toggle'); if (lt) { lt.checked = !!rec.looted; lt.setAttribute('aria-checked', lt.checked ? 'true' : 'false'); } } catch(e) {}
 					document.getElementById('record-note').value = rec.note || '';
 					document.getElementById('record-add').innerText = '儲存修改';
 					// show cancel button while editing
