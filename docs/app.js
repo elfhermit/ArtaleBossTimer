@@ -194,11 +194,21 @@ function calculateRespawnTimes(killISO, bossRule) {
 				if (!theme || theme === 'light') {
 					document.body.classList.remove('theme-dark');
 					localStorage.setItem('abt_theme', 'light');
-					const btn = document.getElementById('theme-toggle'); if (btn) { btn.setAttribute('aria-pressed','false'); btn.innerText = '切換主題'; }
+					const btn = document.getElementById('theme-toggle'); if (btn) {
+						btn.setAttribute('aria-pressed','false');
+						btn.title = '目前主題：淺色 / 切換至深色';
+						btn.innerHTML = '<strong style="font-size:1.0em">🌞</strong> / 🌙';
+						btn.classList.remove('theme-active');
+					}
 				} else {
 					document.body.classList.add('theme-dark');
 					localStorage.setItem('abt_theme', 'dark');
-					const btn = document.getElementById('theme-toggle'); if (btn) { btn.setAttribute('aria-pressed','true'); btn.innerText = '切換主題'; }
+					const btn = document.getElementById('theme-toggle'); if (btn) {
+						btn.setAttribute('aria-pressed','true');
+						btn.title = '目前主題：深色 / 切換至淺色';
+						btn.innerHTML = '🌞 / <strong style="font-size:1.0em">🌙</strong>';
+						btn.classList.add('theme-active');
+					}
 				}
 			} catch (e) { /* ignore */ }
 		}
