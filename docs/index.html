@@ -29,26 +29,29 @@
     </div>
 
     <div class="row">
-      <div class="col s12 m4">
+      <!-- 左側：監控主視覺（70%） -->
+      <div class="col s12 m8">
         <div id="app">
           <section class="card" style="padding:12px;margin-bottom:12px">
-            <h5>選擇 Boss</h5>
-            <p style="margin:0 0 8px 0;color:#666">可在下方下拉選單或搜尋快速過濾 Boss 名稱</p>
+            <h5>即時戰況監控</h5>
+            <p style="margin:0 0 8px 0;color:#666">點擊右側的快速紀錄或在卡片上按下「⚔️ 紀錄擊殺」</p>
+            <div id="monitor-root" style="max-height:520px;overflow:auto"></div>
+          </section>
+          <section class="card" style="padding:12px;">
+            <h6 style="margin-top:0">快速篩選 / Boss 列表</h6>
             <div id="boss-select-root">
               <select id="boss-dropdown" style="width:100%;margin-top:8px"></select>
             </div>
-          </section>
-          <section class="card" style="padding:12px;">
-            <h6 style="margin-top:0">精簡 Boss 列表</h6>
-            <div id="boss-list-compact" style="max-height:300px;overflow:auto"></div>
+            <div id="boss-list-compact" style="max-height:200px;overflow:auto;margin-top:8px"></div>
           </section>
         </div>
       </div>
-      <div class="col s12 m8">
-        <section class="card" style="padding:16px;margin-bottom:12px">
-          <h5>擊殺紀錄（快速新增）</h5>
+      <!-- 右側：快速作業區（30%） -->
+      <div class="col s12 m4">
+        <aside id="sidebar" class="card sidebar-sticky" style="padding:12px;">
+          <h5 style="margin-top:0">快速紀錄 / 工具</h5>
           <div id="record-form-root"></div>
-        </section>
+        </aside>
         <section class="card" style="padding:16px;margin-top:12px">
           <h5>紀錄清單</h5>
           <div id="records-root"></div>
