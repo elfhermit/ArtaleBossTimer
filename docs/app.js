@@ -187,6 +187,37 @@ function calculateRespawnTimes(killISO, bossRule) {
 		}
 
 		// --- render helpers ---
+
+		// --- Theme toggle helpers ---
+		function applyTheme(theme) {
+			try {
+				if (!theme || theme === 'light') {
+					document.body.classList.remove('theme-dark');
+					localStorage.setItem('abt_theme', 'light');
+					const btn = document.getElementById('theme-toggle'); if (btn) { btn.setAttribute('aria-pressed','false'); btn.innerText = '切換主題'; }
+				} else {
+					document.body.classList.add('theme-dark');
+					localStorage.setItem('abt_theme', 'dark');
+					const btn = document.getElementById('theme-toggle'); if (btn) { btn.setAttribute('aria-pressed','true'); btn.innerText = '切換主題'; }
+				}
+			} catch (e) { /* ignore */ }
+		}
+
+		function initThemeToggle() {
+			try {
+				const stored = localStorage.getItem('abt_theme');
+				if (stored === 'dark') applyTheme('dark'); else applyTheme('light');
+				const btn = document.getElementById('theme-toggle');
+				if (!btn) return;
+				btn.addEventListener('click', () => {
+					const cur = localStorage.getItem('abt_theme') === 'dark' ? 'dark' : 'light';
+					applyTheme(cur === 'dark' ? 'light' : 'dark');
+				});
+				// allow keyboard toggle
+				btn.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); btn.click(); } });
+			} catch (e) {}
+		}
+
 		function renderBosses(list) {
 			// Populate compact dropdown and list (if present) instead of large grid
 			const dropdown = document.getElementById('boss-dropdown');
@@ -1110,8 +1141,10 @@ function calculateRespawnTimes(killISO, bossRule) {
 	// --- fetch bosses and initialize UI ---
 	fetch('bosses/bosses.json')
 		.then(r => r.json())
-		.then(bosses => {
-			BOSSES = bosses;
+		    .then(bosses => {
+			    // initialize theme toggle (before UI renders) to apply body class early
+			    try { initThemeToggle(); } catch (e) {}
+			    BOSSES = bosses;
 			renderBosses(bosses);
 			buildCalculatorAndRecordUI(bosses);
 			// if there was a previously selected boss, call prefill to show preview and highlight

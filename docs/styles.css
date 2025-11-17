@@ -114,13 +114,16 @@ table .btn-small { padding: 4px 6px; font-size: 0.75rem; }
 
 /* dark mode adjustments (temporarily disabled)
 @media (prefers-color-scheme: dark) {
-	:root { --ui-bg: #0f1720; --ui-text: #e6eef6; --switch-bg: #2b2f36; }
-	body { background: var(--ui-bg); color: var(--ui-text); }
-	.card { background: #0b1116; box-shadow: 0 1px 6px rgba(0,0,0,0.6); }
-	.monitor-card { border-bottom: 1px solid rgba(255,255,255,0.04); }
-	.monitor-small, .monitor-card .respawn-status { color: #cbd5e1; }
+	/* this block is intentionally left commented-out above; instead we provide a class-based dark theme below */
 }
 */
+
+/* class-based dark theme (apply by adding `theme-dark` to <body>) */
+.theme-dark { --ui-bg: #0f1720; --ui-text: #e6eef6; --switch-bg: #2b2f36; }
+.theme-dark body, .theme-dark { background: var(--ui-bg); color: var(--ui-text); }
+.theme-dark .card { background: #0b1116; box-shadow: 0 1px 6px rgba(0,0,0,0.6); }
+.theme-dark .monitor-card { border-bottom: 1px solid rgba(255,255,255,0.04); }
+.theme-dark .monitor-small, .theme-dark .monitor-card .respawn-status { color: #cbd5e1; }
 
 /* slight spacing for monitor card actions */
 .monitor-actions { display:flex; gap:8px; align-items:center; }
