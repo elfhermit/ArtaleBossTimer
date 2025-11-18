@@ -87,13 +87,6 @@ body {
     gap: 12px;
 }
 
-/* 暫時在 UI 隱藏的功能（匯入/匯出）
-   - 保留按鈕在 DOM，避免改動 JS 或功能呼叫
-   - 使用 display:none 隱藏，不會影響功能邏輯
-*/
-.hidden-feature {
-    display: none !important;
-}
 
 /* --- 3. 主佈局 (關鍵修正) --- */
 .container {
