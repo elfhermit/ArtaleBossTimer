@@ -1,6 +1,6 @@
 
 <!-- Copilot 專案指引（針對本存放庫的簡短、可落地指示） -->
-# 快速代理人指南 — ArtaleBossTimer
+# 快速代理人指南 — Artale-Boss-Chaser
 
 本檔案提供給 Copilot/AI 程式碼代理人的精簡、可執行指引，讓你能快速在本專案中開始工作。
 

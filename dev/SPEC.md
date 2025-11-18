@@ -1,4 +1,4 @@
-# SPEC (schema v1) — ArtaleBossTimer
+# SPEC (schema v1) — Artale-Boss-Chaser
 
 此檔案為專案的規格文件（schema v1），記錄資料儲存、Boss 復活規則、保留策略與簡單的遷移 / 備份範例。
 
